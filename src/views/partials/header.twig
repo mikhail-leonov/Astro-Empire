@@ -1,14 +1,19 @@
-<nav class="navbar navbar-dark bg-dark navbar-expand-lg">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="/">Empty Node Type Script</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarContent">
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
-            </ul>
-
-        </div>
-    </div>
-</nav>
+<header class="topbar">
+    <a class="brand" href="/">
+        <span class="logo">🌌</span>
+        <span class="brandtext"><b>ASTRO EMPIRE</b><small>Command Console</small></span>
+    </a>
+    <nav class="topnav">
+        {% if currentUser %}
+            <span class="who">◢ {{ currentUser.username }}</span>
+            <a class="navlink" href="/account">Account</a>
+            <form method="POST" action="/logout" class="inline">
+                <input type="hidden" name="_csrf" value="{{ csrfToken }}">
+                <button type="submit" class="navlink btn-link">Log out</button>
+            </form>
+        {% else %}
+            <a class="navlink" href="/login">Log in</a>
+            <a class="navlink primary" href="/register">Register</a>
+        {% endif %}
+    </nav>
+</header>

@@ -1,0 +1,9 @@
+{% extends "layout.twig" %}
+{% block content %}
+<section class="card error-card">
+    <div class="error-code">{{ code | default(500) }}</div>
+    <h2>{{ title | default('Error') }}</h2>
+    <p class="muted">{{ message | default('Something went wrong.') }}</p>
+    <a class="btn btn-ghost" href="/">Return to base</a>
+</section>
+{% endblock %}

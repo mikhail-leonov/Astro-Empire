@@ -1,0 +1,55 @@
+{% extends "layout.twig" %}
+{% block content %}
+<section class="card auth-card">
+    <h2>Database setup</h2>
+    <p class="muted">
+        Astro Empire can't reach a database yet. Enter your MySQL connection
+        details below — they'll be tested and saved to your <code>.env</code> file.
+    </p>
+
+    {% if errors._form %}<div class="flash flash-error">{{ errors._form }}</div>{% endif %}
+
+    <form method="POST" action="/setup" novalidate>
+        <input type="hidden" name="_csrf" value="{{ csrfToken }}">
+
+        <div class="grid-2">
+            <label class="field">
+                <span>Host</span>
+                <input type="text" name="host" value="{{ old.host | default('localhost') }}"
+                       class="{{ errors.host ? 'is-invalid' : '' }}" required autofocus>
+                {% if errors.host %}<small class="err">{{ errors.host }}</small>{% endif %}
+            </label>
+
+            <label class="field">
+                <span>Port</span>
+                <input type="number" name="port" value="{{ old.port | default('3306') }}"
+                       class="{{ errors.port ? 'is-invalid' : '' }}" min="1" max="65535" required>
+                {% if errors.port %}<small class="err">{{ errors.port }}</small>{% endif %}
+            </label>
+        </div>
+
+        <label class="field">
+            <span>User</span>
+            <input type="text" name="user" value="{{ old.user | default('root') }}"
+                   class="{{ errors.user ? 'is-invalid' : '' }}" autocomplete="off" required>
+            {% if errors.user %}<small class="err">{{ errors.user }}</small>{% endif %}
+        </label>
+
+        <label class="field">
+            <span>Password</span>
+            <input type="password" name="password" autocomplete="off">
+            <small class="hint">Leave blank if the user has no password.</small>
+        </label>
+
+        <label class="field">
+            <span>Database name</span>
+            <input type="text" name="database" value="{{ old.database | default('astro_empire') }}"
+                   class="{{ errors.database ? 'is-invalid' : '' }}" required>
+            {% if errors.database %}<small class="err">{{ errors.database }}</small>
+            {% else %}<small class="hint">Will be created automatically if it doesn't exist.</small>{% endif %}
+        </label>
+
+        <button type="submit" class="btn btn-primary btn-block">Test &amp; save connection</button>
+    </form>
+</section>
+{% endblock %}

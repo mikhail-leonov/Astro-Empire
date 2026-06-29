@@ -1,5 +1,4 @@
 import dotenv from 'dotenv';
-import path from 'path';
 
 dotenv.config();
 
@@ -15,34 +14,24 @@ function int(key: string, fallback: number): number {
   return Number.isNaN(n) ? fallback : n;
 }
 
-function bool(key: string, fallback: boolean): boolean {
-  const v = process.env[key];
-  if (v === undefined || v === '') return fallback;
-  return /^(1|true|yes|on)$/i.test(v.trim());
-}
-
-function list(key: string, fallback: string[]): string[] {
-  const v = process.env[key];
-  if (v === undefined || v === '') return fallback;
-  return v
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
 export const config = {
   env: str('NODE_ENV', 'development'),
-  port: int('PORT', 3080),
+  port: int('PORT', 3000),
+
+  session: {
+    secret: str('SESSION_SECRET', 'insecure-dev-secret-change-me'),
+    name: str('SESSION_NAME', 'astro.sid'),
+    maxAge: int('SESSION_MAX_AGE_MS', 7 * 24 * 60 * 60 * 1000),
+  },
 
   db: {
-    host: str('DB_HOST', '127.0.0.1'),
+    host: str('DB_HOST', 'localhost'),
     port: int('DB_PORT', 3306),
     user: str('DB_USER', 'root'),
     password: str('DB_PASSWORD', ''),
-    database: str('DB_NAME', 'video_collection'),
-    connectionLimit: int('DB_CONNECTION_LIMIT', 10),
+    database: str('DB_NAME', 'astro_empire'),
+    connectionLimit: int('DB_POOL', 10),
   },
-
 };
 
 export type AppConfig = typeof config;

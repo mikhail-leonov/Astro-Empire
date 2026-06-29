@@ -1,0 +1,33 @@
+{% extends "layout.twig" %}
+{% block content %}
+<section class="card auth-card">
+    <h2>Log in</h2>
+    <p class="muted">Welcome back, Commander.</p>
+
+    {% if errors._form %}<div class="flash flash-error">{{ errors._form }}</div>{% endif %}
+
+    <form method="POST" action="/login" novalidate>
+        <input type="hidden" name="_csrf" value="{{ csrfToken }}">
+
+        <label class="field">
+            <span>Username or email</span>
+            <input type="text" name="identifier" autocomplete="username"
+                   value="{{ old.identifier | default('') }}"
+                   class="{{ errors.identifier ? 'is-invalid' : '' }}"
+                   required autofocus>
+            {% if errors.identifier %}<small class="err">{{ errors.identifier }}</small>{% endif %}
+        </label>
+
+        <label class="field">
+            <span>Password</span>
+            <input type="password" name="password" autocomplete="current-password"
+                   class="{{ errors.password ? 'is-invalid' : '' }}" required>
+            {% if errors.password %}<small class="err">{{ errors.password }}</small>{% endif %}
+        </label>
+
+        <button type="submit" class="btn btn-primary btn-block">Log in</button>
+    </form>
+
+    <p class="alt">No account yet? <a href="/register">Create one</a>.</p>
+</section>
+{% endblock %}
