@@ -3,17 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}{{ title | default('Astro Empire') }}{% endblock %} · Astro Empire</title>
-    <link rel="stylesheet" href="/public/css/app.css">
+    <title>Astro Empire</title>
+    <link rel="stylesheet" href="public/css/bootstrap/bootstrap.min.css">
+    <link rel="stylesheet" href="public/fonts/common/fraunces.css">
+    <link rel="stylesheet" href="public/icons/common/bootstrap-icons.css">
+    <link rel="stylesheet" href="public/css/app.css">
 </head>
 <body>
-    <canvas class="stars" id="stars"></canvas>
-    {% include "partials/header.twig" %}
-    <main class="wrap">
-        {% include "partials/flash.twig" %}
-        {% block content %}{% endblock %}
-    </main>
-    <footer class="foot">Astro Empire · v{{ version | default('1.0.0') }}</footer>
-    <script src="/public/js/app.js"></script>
+    <div id="app">{% block content %}{% endblock %}</div>
+    <script src="public/js/bootstrap/bootstrap.min.js"></script>
+    <script src="public/js/galaxygen.js"></script>
+    <script src="public/js/app.js"></script>
 </body>
 </html>

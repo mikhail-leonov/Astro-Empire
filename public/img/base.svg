@@ -1,0 +1,49 @@
+<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="dome" cx="42%" cy="34%" r="70%">
+      <stop offset="0%" stop-color="#bfe9ff" stop-opacity="0.95"/>
+      <stop offset="55%" stop-color="#5ec6ff" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#1b7fc4" stop-opacity="0.30"/>
+    </radialGradient>
+    <linearGradient id="hull" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e7eefc"/>
+      <stop offset="100%" stop-color="#9fb0c8"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2.2" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- landing pad / ground plate -->
+  <ellipse cx="60" cy="92" rx="44" ry="11" fill="#0b1626" opacity="0.55"/>
+  <ellipse cx="60" cy="90" rx="40" ry="9" fill="none" stroke="#6fe3c0" stroke-width="1.4" opacity="0.7"/>
+
+  <!-- habitat modules -->
+  <g stroke="#2b3a52" stroke-width="1">
+    <rect x="20" y="70" width="22" height="16" rx="3" fill="url(#hull)"/>
+    <rect x="78" y="68" width="24" height="18" rx="3" fill="url(#hull)"/>
+    <rect x="46" y="74" width="14" height="12" rx="2" fill="url(#hull)"/>
+  </g>
+
+  <!-- connecting tube -->
+  <rect x="40" y="78" width="42" height="5" rx="2.5" fill="#7f8ea6" stroke="#2b3a52" stroke-width="0.8"/>
+
+  <!-- central dome -->
+  <path d="M34 76 A26 26 0 0 1 86 76 Z" fill="url(#dome)" stroke="#bfe9ff" stroke-width="1.2"/>
+  <path d="M34 76 A26 26 0 0 1 86 76" fill="none" stroke="#eafaff" stroke-width="0.8" opacity="0.8"/>
+  <line x1="60" y1="50" x2="60" y2="76" stroke="#bfe9ff" stroke-width="0.6" opacity="0.5"/>
+  <path d="M44 76 A16 16 0 0 1 76 76" fill="none" stroke="#bfe9ff" stroke-width="0.5" opacity="0.45"/>
+
+  <!-- comms mast -->
+  <g filter="url(#glow)">
+    <line x1="94" y1="68" x2="94" y2="48" stroke="#cfd9ea" stroke-width="1.6"/>
+    <circle cx="94" cy="46" r="2.6" fill="#6fe3c0"/>
+  </g>
+  <g fill="#ffd76a">
+    <rect x="22" y="72" width="3" height="3"/>
+    <rect x="30" y="72" width="3" height="3"/>
+    <rect x="82" y="71" width="3" height="3"/>
+    <rect x="90" y="71" width="3" height="3"/>
+  </g>
+</svg>
