@@ -1,20 +1,20 @@
 {
-  "_note": "Source image URLs for each AstroEmpires astro type. Run scripts/fetch-astro-images.mjs to download them into this folder as <type>.png for offline re-use. At runtime the app loads /public/img/astros/<type>.png and falls back to the source URL below if the local file is absent.",
+  "_note": "Original local artwork for each astro type — no external network calls. Each file is public/img/astros/<type>.svg, generated once and re-used by every request.",
   "images": {
-    "arid":        "https://static.wikia.nocookie.net/astroempires/images/f/f5/Astro_arid_medium.png/revision/latest?cb=20110617211647",
-    "asteroid":    "https://static.wikia.nocookie.net/astroempires/images/6/62/Astro_Asteroid_medium.png/revision/latest?cb=20110617211703",
-    "craters":     "https://static.wikia.nocookie.net/astroempires/images/7/78/Astro_craters_medium.png/revision/latest?cb=20110617211838",
-    "earthly":     "https://static.wikia.nocookie.net/astroempires/images/c/ce/Astro_Earthly_medium.png/revision/latest?cb=20110617211839",
-    "gaia":        "https://static.wikia.nocookie.net/astroempires/images/2/2b/Astro_Gaia_medium.png/revision/latest?cb=20110617211840",
-    "glacial":     "https://static.wikia.nocookie.net/astroempires/images/2/29/Astro_Glacial_medium.png/revision/latest?cb=20110617211841",
-    "magma":       "https://static.wikia.nocookie.net/astroempires/images/b/b3/Astro_Magma_medium.png/revision/latest?cb=20110617211842",
-    "metallic":    "https://static.wikia.nocookie.net/astroempires/images/a/a6/Astro_Metallic_medium.png/revision/latest?cb=20110617211843",
-    "oceanic":     "https://static.wikia.nocookie.net/astroempires/images/f/f1/Astro_Oceanic_medium.png/revision/latest?cb=20110617211843",
-    "radioactive": "https://static.wikia.nocookie.net/astroempires/images/6/6f/Astro_Radioactive_medium.png/revision/latest?cb=20110617211844",
-    "rocky":       "https://static.wikia.nocookie.net/astroempires/images/c/cc/Astro_Rocky_medium.png/revision/latest?cb=20110617211845",
-    "toxic":       "https://static.wikia.nocookie.net/astroempires/images/a/a9/Astro_Toxic_medium.png/revision/latest?cb=20110617211846",
-    "tundra":      "https://static.wikia.nocookie.net/astroempires/images/5/5a/Astro_Tundra_medium.png/revision/latest?cb=20110617211949",
-    "volcanic":    "https://static.wikia.nocookie.net/astroempires/images/4/40/Astro_Volcanic_medium.png/revision/latest?cb=20110617211950",
-    "crystalline": "https://static.wikia.nocookie.net/astroempires/images/c/c4/Astro_Crystalline_medium.png/revision/latest?cb=20110618185919"
+    "arid": "arid.svg",
+    "asteroid": "asteroid.svg",
+    "craters": "craters.svg",
+    "earthly": "earthly.svg",
+    "gaia": "gaia.svg",
+    "glacial": "glacial.svg",
+    "magma": "magma.svg",
+    "metallic": "metallic.svg",
+    "oceanic": "oceanic.svg",
+    "radioactive": "radioactive.svg",
+    "rocky": "rocky.svg",
+    "toxic": "toxic.svg",
+    "tundra": "tundra.svg",
+    "volcanic": "volcanic.svg",
+    "crystalline": "crystalline.svg"
   }
 }

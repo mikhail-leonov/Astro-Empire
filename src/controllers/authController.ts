@@ -36,9 +36,10 @@ export async function register(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  // Log the new user straight in.
+  // Log the new user straight in (default role/tier: user / Free).
   req.session.userId = result.userId;
   req.session.username = values.username;
+  req.session.role = result.role;
   addFlash(req, 'success', `Welcome aboard, Commander ${values.username}.`);
   res.redirect('/account');
 }
@@ -67,6 +68,7 @@ export async function login(req: Request, res: Response): Promise<void> {
 
   req.session.userId = result.user.id;
   req.session.username = result.user.username;
+  req.session.role = result.user.role;
   addFlash(req, 'success', 'Logged in. The galaxy awaits.');
   res.redirect('/account');
 }
@@ -94,6 +96,11 @@ export async function account(req: Request, res: Response): Promise<void> {
   }
 
   res.render('account', { title: 'Account', account: user });
+}
+
+/* ---------------------------------------------------------- play (game) */
+export function game(_req: Request, res: Response): void {
+  res.render('play', { title: 'Astro Empire · Galaxy' });
 }
 
 /* ---------------------------------------------------------- delete account */

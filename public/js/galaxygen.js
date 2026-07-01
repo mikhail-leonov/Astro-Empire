@@ -19,6 +19,16 @@
    from (masterSeed, location) without materialising the whole galaxy. The same
    inputs always yield the same entities. The simulation core is DOM-free;
    the page layer reuses the existing app shell, classes and event style.
+
+   ---- Fix notes (this build) ----
+   1. Generating a galaxy now grants the player 100,000,000 credits (see
+      doGenerate()) so bases/ships/colonization are immediately affordable.
+   2. Astro ownership is now driven by real game state (S.colonized, set by
+      app.js when an Outpost Ship actually lands) rather than only the
+      cosmetic per-astro "hasBase" flag used for flavor/NPC bases. An Outpost
+      Ship en route is never shown as owning its destination.
+   3. The astro detail card now offers "Send Outpost Ship" for any
+      uncolonized, non-gas astro, which calls window.__ASTRO.sendColonize().
    ========================================================================== */
 (function () {
   "use strict";
@@ -114,34 +124,13 @@
     tundra: "#cfe3ec", volcanic: "#c2402f", crystalline: "#b07fe6"
   };
 
-  // Astro artwork. Files are served from a local folder for re-use; if a file
-  // isn't present yet (run scripts/fetch-astro-images.mjs to populate it) the
-  // <img> transparently falls back to the original AstroEmpires source URL.
+  // Astro artwork: original local SVGs, one per type, served from
+  // /public/img/astros/<type>.svg. No external requests, no CDN fallback.
   var ASTRO_IMG_LOCAL = "/public/img/astros/";
-  var ASTRO_IMG_CDN = "https://static.wikia.nocookie.net/astroempires/images/";
-  var ASTRO_IMG = {
-    arid: "f/f5/Astro_arid_medium.png/revision/latest?cb=20110617211647",
-    asteroid: "6/62/Astro_Asteroid_medium.png/revision/latest?cb=20110617211703",
-    craters: "7/78/Astro_craters_medium.png/revision/latest?cb=20110617211838",
-    earthly: "c/ce/Astro_Earthly_medium.png/revision/latest?cb=20110617211839",
-    gaia: "2/2b/Astro_Gaia_medium.png/revision/latest?cb=20110617211840",
-    glacial: "2/29/Astro_Glacial_medium.png/revision/latest?cb=20110617211841",
-    magma: "b/b3/Astro_Magma_medium.png/revision/latest?cb=20110617211842",
-    metallic: "a/a6/Astro_Metallic_medium.png/revision/latest?cb=20110617211843",
-    oceanic: "f/f1/Astro_Oceanic_medium.png/revision/latest?cb=20110617211843",
-    radioactive: "6/6f/Astro_Radioactive_medium.png/revision/latest?cb=20110617211844",
-    rocky: "c/cc/Astro_Rocky_medium.png/revision/latest?cb=20110617211845",
-    toxic: "a/a9/Astro_Toxic_medium.png/revision/latest?cb=20110617211846",
-    tundra: "5/5a/Astro_Tundra_medium.png/revision/latest?cb=20110617211949",
-    volcanic: "4/40/Astro_Volcanic_medium.png/revision/latest?cb=20110617211950",
-    crystalline: "c/c4/Astro_Crystalline_medium.png/revision/latest?cb=20110618185919"
-  };
-  function astroImgCdn(type) { return ASTRO_IMG_CDN + (ASTRO_IMG[type] || ASTRO_IMG.rocky); }
-  function astroImgLocal(type) { return ASTRO_IMG_LOCAL + type + ".png"; }
+  function astroImgLocal(type) { return ASTRO_IMG_LOCAL + type + ".svg"; }
   function astroImg(type, cls) {
-    var local = astroImgLocal(type), cdn = astroImgCdn(type);
     return '<img class="' + cls + '" loading="lazy" alt="' + type +
-      '" src="' + local + '" onerror="this.onerror=null;this.src=\'' + cdn + '\'">';
+      '" src="' + astroImgLocal(type) + '">';
   }
 
   // Weighted pool of planet/moon types. Rocky and (especially) Crystalline are
@@ -510,6 +499,13 @@
   function persist() { ctx.save(); }
   function navTo(v) { if (ctx && typeof ctx.setView === "function") ctx.setView(v); else rerender(); }
 
+  // Real ownership (this playthrough actually colonized this address), kept
+  // distinct from the astro's cosmetic/NPC "hasBase" flavor flag.
+  function isPlayerOwned(addr) {
+    var st = S();
+    return !!(st && st.colonized && st.colonized[addr]);
+  }
+
   /* ---------------- controls ---------------- */
   var SEG = {
     stars: ["low", "mid", "high"],
@@ -588,7 +584,8 @@
       "with a type (Rocky, Gaia, Crystalline …). Metal, Gas, Crystal and Area come " +
       "from the type; Solar, Fertility and the Gas bonus come from the orbital " +
       "(Solar = 5 − orbital; +1 Fertility on orbitals 2–3; +1 Gas on orbitals 4–5). " +
-      "Click a star on the map to inspect its astros.</div>";
+      "Click a star on the map to inspect its astros. Generating grants " +
+      "<b>100,000,000</b> credits to build with.</div>";
     R += '<div class="ggactions">' +
       '<button class="btn big" data-gg="generate">✦ Generate Galaxy</button>' +
       '<button class="btn ghost" data-gg="reseed">🎲 Reseed</button></div>';
@@ -772,8 +769,10 @@
     };
   }
   function apiGenerate(gg) {
+    var headers = { "Content-Type": "application/json" };
+    if (window.__CSRF__) headers["x-csrf-token"] = window.__CSRF__;
     return api("/api/galaxy/generate", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: headers,
       body: JSON.stringify(genPayload(gg))
     });
   }
@@ -948,19 +947,22 @@
   }
 
   function astroTitle(a) {
+    var owned = a.hasBase || isPlayerOwned(a.address);
     if (a.kind === "gas") return "Gas Giant · " + a.address + " · uncolonisable";
     var s = a.astro;
     return s.typeName + " " + (a.kind === "asteroid" ? "Asteroid"
       : (a.kind === "moon" ? "Moon" : "Planet")) + " · " + a.address +
       " · Area " + s.area + " Solar " + s.solar + " Fert " + s.fertility +
-      " Metal " + s.metal + " Gas " + s.gas + " Crystal " + s.crystal;
+      " Metal " + s.metal + " Gas " + s.gas + " Crystal " + s.crystal +
+      (owned ? " · BASE" : "");
   }
   function tail(addr) { var p = addr.split(":"); return p[p.length - 1]; }
 
   function astroMark(a) {
-    var ttl = astroTitle(a) + (a.hasBase ? " · BASE" : ""), code = tail(a.address);
+    var owned = a.hasBase || isPlayerOwned(a.address);
+    var ttl = astroTitle(a), code = tail(a.address);
     var data = ' data-gg="astro" data-orbit="' + a.orbit + '" data-pos="' + a.position + '"';
-    var badge = a.hasBase ? '<span class="basebadge" title="Colonised — base present">⌂</span>' : "";
+    var badge = owned ? '<span class="basebadge" title="Colonised — base present">⌂</span>' : "";
 
     if (a.kind === "gas") {
       return '<div class="amark"' + data + ' title="' + ttl + '"><div class="disc gas">' +
@@ -970,17 +972,19 @@
     var s = a.astro;
     var cls = a.kind === "moon" ? "disc moon" : a.kind === "asteroid" ? "disc asteroid" : "disc planet";
     var name = a.kind === "asteroid" ? "Asteroid" : s.typeName;
-    return '<div class="amark' + (a.hasBase ? " owned" : "") + '"' + data + ' title="' + ttl +
+    return '<div class="amark' + (owned ? " owned" : "") + '"' + data + ' title="' + ttl +
       '">' + astroImg(s.type, cls) + badge + '<div class="alabel">' + name +
       '<span class="acode">' + code + "</span></div></div>";
   }
 
   // Detail when an astro is clicked: a planet card with stats. If the astro is
-  // colonised it carries a base marker and a "View base" link into the full
-  // base screen (Overview / Structures / Production / Research / Trade).
+  // colonised (by the player OR by cosmetic NPC flavor) it carries a base
+  // marker and a "View base" link into the full base screen. Otherwise, for
+  // real colonisable astros, a "Send Outpost Ship" action is offered.
   function astroDetail(gg, a) {
     var isGas = a.kind === "gas";
-    if (a.hasBase && !isGas && gg.baseOpen) return baseView(gg, a);
+    var owned = a.hasBase || isPlayerOwned(a.address);
+    if (owned && !isGas && gg.baseOpen) return baseView(gg, a);
 
     var name = isGas ? "Gas Giant" : (a.kind === "asteroid" ? a.astro.typeName + " Asteroid"
       : a.astro.typeName + (a.kind === "moon" ? " Moon" : " Planet"));
@@ -991,12 +995,12 @@
     var h = '<div class="astro-modal" data-gg="astro-close">' +
       '<div class="astro-card" data-gg="stop"><button class="amclose" data-gg="astro-close">✕</button>' +
       '<div class="astro-figure">' + img +
-      (a.hasBase ? '<span class="base-flag" title="Colonised">⌂</span>' : "") + "</div>";
+      (owned ? '<span class="base-flag" title="Colonised">⌂</span>' : "") + "</div>";
     h += '<div class="astro-info"><div class="astro-name">' + name +
       '<span class="astro-addr">' + a.address + "</span></div>";
     h += '<div class="astro-sub">' + (isGas ? "Uncolonisable gas giant"
       : "Orbital " + a.orbit + " · position " + a.position +
-        (a.hasBase ? ' · <span class="base-tag">⌂ base present</span>'
+        (owned ? ' · <span class="base-tag">⌂ base present</span>'
           : ' · <span class="free-tag">uncolonised</span>')) + "</div>";
     if (!isGas) {
       var s = a.astro;
@@ -1004,8 +1008,12 @@
         statCell("Area", s.area) + statCell("Solar", s.solar) +
         statCell("Fertility", s.fertility) + statCell("Metal", s.metal) +
         statCell("Gas", s.gas) + statCell("Crystal", s.crystal) + "</div>";
-      if (a.hasBase)
+      if (owned) {
         h += '<button class="btn primary bv-open" data-gg="open-base">View base ▸</button>';
+      } else {
+        h += '<button class="btn primary bv-open" data-gg="colonize" data-addr="' + a.address +
+          '" data-size="' + a.astro.area + '">🚀 Send Outpost Ship</button>';
+      }
     } else {
       h += '<div class="base-note">Gas giants have no surface to build on.</div>';
     }
@@ -1147,11 +1155,11 @@
       '<div class="bv-res">' +
         resChip("👤", "Population", base.pop.cur + "/" + base.pop.max, "#8ef0a0") +
         resChip("⚡", "Energy", base.energy.cur + "/" + base.energy.max, "#ffd76a") +
-        resChip("▦", "Area", base.areaUsed + "/" + base.areaTotal, "#7fd1ff") +
+        resChip("▪", "Area", base.areaUsed + "/" + base.areaTotal, "#7fd1ff") +
         resChip("⛏", "Metal", "+" + base.rates.metal, "#cdd6e3") +
-        resChip("◍", "Gas", "+" + base.rates.gas, "#ff9e6a") +
+        resChip("◔", "Gas", "+" + base.rates.gas, "#ff9e6a") +
         resChip("◆", "Crystal", "+" + base.rates.crystal, "#c9a6ff") +
-        resChip("⚗", "Research", "+" + base.rates.research, "#9ad0ff") +
+        resChip("⚙", "Research", "+" + base.rates.research, "#9ad0ff") +
       "</div></div>";
 
     // main tabs
@@ -1204,7 +1212,7 @@
         '<div class="bvicon">' + catIcon(cat, false) + "</div>" +
         '<div class="bvmain"><div class="bvname">' + it.name + "</div>" +
         '<div class="bvmeta">' + (owned ? '<b>' + lvl + "</b> · " + time
-          : '<span class="bvcost">⏣ ' + it.cost + "</span> · " + time) + "</div></div>" +
+          : '<span class="bvcost">⚉ ' + it.cost + "</span> · " + time) + "</div></div>" +
         '<div class="bveff">' + effChips(it.eff) + "</div></div>";
     });
     h += "</div>";
@@ -1220,7 +1228,7 @@
         '<div class="bvd-desc">' + sel.desc + "</div>" +
         (sel.req ? '<div class="bvd-req">Requires: <b>' + sel.req + "</b></div>" : "");
       if (tab === "production")
-        h += '<div class="bvd-act"><span class="bvd-cost">Cost ⏣ ' + sel.cost +
+        h += '<div class="bvd-act"><span class="bvd-cost">Cost ⚉ ' + sel.cost +
           '</span><button class="btn sm primary" disabled>Build</button></div>';
       else
         h += '<div class="bvd-act"><span class="bvd-q">Next level in ' +
@@ -1415,6 +1423,18 @@
     }
     if (a === "base-sub") { gg.baseSub = el.getAttribute("data-to"); gg.baseSel = null; rerender(); persist(); return; }
     if (a === "base-sel") { gg.baseSel = el.getAttribute("data-id"); rerender(); persist(); return; }
+    if (a === "colonize") {
+      var addr = el.getAttribute("data-addr"), size = +el.getAttribute("data-size");
+      if (window.__ASTRO && window.__ASTRO.sendColonize) {
+        window.__ASTRO.sendColonize(addr, size).then(function (okSent) {
+          if (!okSent) return;
+          gg.astroSel = null;
+          var refreshed = ctx && ctx.refreshState ? ctx.refreshState() : Promise.resolve();
+          refreshed.then(function () { rerender(); persist(); });
+        });
+      }
+      return;
+    }
     if (a === "astro") {
       gg.astroSel = { orbit: +el.getAttribute("data-orbit"), pos: +el.getAttribute("data-pos") };
       gg.baseOpen = false; gg.baseTab = "overview"; gg.baseSub = null; gg.baseSel = null;
@@ -1437,6 +1457,9 @@
 
   // Generate: clear + populate the database, then load the map from it. If no
   // server/DB is reachable, fall back to the deterministic local engine.
+  // The server grants the commander 100,000,000 credits as part of
+  // POST /api/galaxy/generate — the client just re-fetches authoritative
+  // state afterwards rather than assuming/duplicating that number locally.
   function doGenerate(gg) {
     gg.result = runStats(gg);
     gg.page = "galaxy"; gg.region = null; gg.system = null; gg.systemData = null;
@@ -1447,7 +1470,11 @@
       .then(function () { return apiMap(gg); })
       .then(function (map) { gg.map = map; gg.source = "db"; })
       .catch(function () { gg.map = buildLocalMap(gg); gg.source = "local"; })
-      .then(function () { gg.loading = false; rerender(); persist(); navTo("galaxymap"); });
+      .then(function () {
+        gg.loading = false;
+        var refreshed = ctx && ctx.refreshState ? ctx.refreshState() : Promise.resolve();
+        return refreshed.then(function () { rerender(); persist(); navTo("galaxymap"); });
+      });
   }
 
   function openSystem(gg, el) {

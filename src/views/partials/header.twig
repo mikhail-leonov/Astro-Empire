@@ -5,7 +5,11 @@
     </a>
     <nav class="topnav">
         {% if currentUser %}
-            <span class="who">◢ {{ currentUser.username }}</span>
+            <span class="who">● {{ currentUser.username }}</span>
+            {% if currentUser.role == 'admin' %}
+                <a class="navlink" href="/admin">Admin</a>
+            {% endif %}
+            <a class="navlink" href="/play">Play</a>
             <a class="navlink" href="/account">Account</a>
             <form method="POST" action="/logout" class="inline">
                 <input type="hidden" name="_csrf" value="{{ csrfToken }}">

@@ -1,7 +1,9 @@
 # Astro images
 
-Files here are named `<type>.png` (arid, asteroid, craters, earthly, gaia, glacial,
-magma, metallic, oceanic, radioactive, rocky, toxic, tundra, volcanic, crystalline).
+Original local SVG artwork, one file per astro type: `<type>.svg` (arid,
+asteroid, craters, earthly, gaia, glacial, magma, metallic, oceanic,
+radioactive, rocky, toxic, tundra, volcanic, crystalline).
 
-The app loads `/public/img/astros/<type>.png`. If a file is missing it falls back to
-the source URL listed in `manifest.json` at runtime.
+The app loads `/public/img/astros/<type>.svg` directly — no external
+requests, no CDN fallback. Re-generate or restyle any file in place; the
+name-to-type mapping lives in `manifest.json`.

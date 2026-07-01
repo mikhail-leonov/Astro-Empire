@@ -1,0 +1,96 @@
+{% extends "layout.twig" %}
+{% block content %}
+<section class="card admin-card">
+    <h2>Admin · Accounts</h2>
+    <p class="muted">Manage every commander's web account: username, email, role and account tier.</p>
+
+    <table class="admin-table">
+        <thead>
+            <tr><th>ID</th><th>Username</th><th>Email</th><th>Role</th><th>Tier</th><th>Last seen</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+        {% for a in accounts %}
+            <tr>
+                <form method="POST" action="/admin/users/{{ a.id }}">
+                    <input type="hidden" name="_csrf" value="{{ csrfToken }}">
+                    <td>{{ a.id }}</td>
+                    <td><input type="text" name="username" value="{{ a.username }}" maxlength="32"></td>
+                    <td><input type="email" name="email" value="{{ a.email }}" maxlength="255"></td>
+                    <td>
+                        <select name="role">
+                            <option value="user" {{ a.role == 'user' ? 'selected' : '' }}>user</option>
+                            <option value="admin" {{ a.role == 'admin' ? 'selected' : '' }}>admin</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select name="tierId">
+                            {% for t in tiers %}
+                                <option value="{{ t.id }}" {{ t.id == a.tierId ? 'selected' : '' }}>{{ t.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td>{{ a.last_seen | date('M j, Y') }}</td>
+                    <td class="admin-actions">
+                        <button type="submit" class="btn btn-ghost btn-sm">Save</button>
+                </form>
+                <form method="POST" action="/admin/users/{{ a.id }}/delete" class="inline"
+                      data-confirm="Delete account &quot;{{ a.username }}&quot; permanently? This cannot be undone.">
+                    <input type="hidden" name="_csrf" value="{{ csrfToken }}">
+                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                </form>
+                    </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+<section class="card admin-card">
+    <h2>Admin · Account Tiers</h2>
+    <p class="muted">Create, edit, or delete the tier levels accounts can hold. Higher <b>max bases</b> and
+        <b>max queue</b> raise the empire caps a commander gets on top of their researched bonuses.</p>
+
+    <table class="admin-table">
+        <thead>
+            <tr><th>Code</th><th>Name</th><th>Max bases</th><th>Max queue</th><th>Description</th><th>Order</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+        {% for t in tiers %}
+            <tr>
+                <form method="POST" action="/admin/tiers/{{ t.id }}">
+                    <input type="hidden" name="_csrf" value="{{ csrfToken }}">
+                    <td><input type="text" name="code" value="{{ t.code }}" maxlength="20"></td>
+                    <td><input type="text" name="name" value="{{ t.name }}" maxlength="40"></td>
+                    <td><input type="number" name="maxBases" value="{{ t.maxBases }}" min="1" max="999" class="num"></td>
+                    <td><input type="number" name="maxQueue" value="{{ t.maxQueue }}" min="1" max="99" class="num"></td>
+                    <td><input type="text" name="description" value="{{ t.description }}" maxlength="255"></td>
+                    <td><input type="number" name="sortOrder" value="{{ t.sortOrder }}" class="num"></td>
+                    <td class="admin-actions">
+                        <button type="submit" class="btn btn-ghost btn-sm">Save</button>
+                </form>
+                <form method="POST" action="/admin/tiers/{{ t.id }}/delete" class="inline"
+                      data-confirm="Delete tier &quot;{{ t.name }}&quot;? Accounts must be reassigned first.">
+                    <input type="hidden" name="_csrf" value="{{ csrfToken }}">
+                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                </form>
+                    </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <h3>Add a new tier</h3>
+    <form method="POST" action="/admin/tiers" class="admin-newtier">
+        <input type="hidden" name="_csrf" value="{{ csrfToken }}">
+        <label class="field"><span>Code</span><input type="text" name="code" maxlength="20" required></label>
+        <label class="field"><span>Name</span><input type="text" name="name" maxlength="40" required></label>
+        <label class="field"><span>Max bases</span><input type="number" name="maxBases" value="3" min="1" max="999" required></label>
+        <label class="field"><span>Max queue</span><input type="number" name="maxQueue" value="1" min="1" max="99" required></label>
+        <label class="field"><span>Description</span><input type="text" name="description" maxlength="255"></label>
+        <label class="field"><span>Sort order</span><input type="number" name="sortOrder" value="0"></label>
+        <button type="submit" class="btn btn-primary">Create tier</button>
+    </form>
+</section>
+
+<p class="alt"><a href="/account">← Back to account</a></p>
+{% endblock %}

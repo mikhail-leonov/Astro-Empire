@@ -1,0 +1,13 @@
+{% extends "layout.twig" %}
+{% block content %}
+<!-- The live game mounts here. Everything it shows — commander, credits,
+     bases, garrisoned & in-transit ships, the galaxy map — is fetched from
+     /api/galaxy/state, which reads straight from the DB; nothing is kept in
+     localStorage. This page intentionally shows no account/profile/delete
+     controls — those live only on /account. -->
+<div id="astro-game"></div>
+{% endblock %}
+{% block scripts %}
+    <script src="public/js/galaxygen.js"></script>
+    <script src="public/js/app.js"></script>
+{% endblock %}

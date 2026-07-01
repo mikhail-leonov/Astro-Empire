@@ -18,4 +18,6 @@ router.post('/logout', requireAuth, auth.logout);
 router.get('/account', requireAuth, asyncHandler(auth.account));
 router.post('/account/delete', requireAuth, asyncHandler(auth.deleteAccount));
 
+router.get('/play', requireAuth, auth.game);
+
 export default router;

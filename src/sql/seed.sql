@@ -1,349 +1,307 @@
 -- ============================================================
 -- Astro Empire – Seed Data (with Alien Bases)
 -- ============================================================
--- This seed creates a 6x6 galaxy, a test player ("test" / "password"),
--- a home base, and numerous pirate/alien outposts for testing.
+-- Creates the default account tiers, one admin web account, a test
+-- commander ("test" / "password") with a private 6x6 local galaxy
+-- (systems + planets), a home base with structures/garrison as normalized
+-- rows, several pirate outposts, and a stationed Outpost Ship — every value
+-- a plain relational row, nothing as JSON.
 -- ============================================================
 
--- Disable FK checks for clean truncation
 SET FOREIGN_KEY_CHECKS = 0;
 
+TRUNCATE TABLE gx_claims;
 TRUNCATE TABLE logs;
 TRUNCATE TABLE research_queue;
+TRUNCATE TABLE player_research;
+TRUNCATE TABLE player_techs;
+TRUNCATE TABLE fleet_ships;
 TRUNCATE TABLE fleets;
-TRUNCATE TABLE bases;
+TRUNCATE TABLE base_queue;
+TRUNCATE TABLE base_structures;
+TRUNCATE TABLE pirate_defense;
 TRUNCATE TABLE planets;
+TRUNCATE TABLE bases;
 TRUNCATE TABLE systems;
 TRUNCATE TABLE players;
+TRUNCATE TABLE users;
 
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ------------------------------------------------------------
--- 1. Test player account
---    username: test
---    password: password (bcrypt hash)
---    seed: 12345 (deterministic galaxy generation)
+-- 0. Account tiers are seeded by schema.sql. Nothing further needed here.
 -- ------------------------------------------------------------
-INSERT INTO players (
-    id, username, email, password_hash, credits, research_points, techs, seed, created_at 
-) VALUES (
-    1, 'test', 'test@example.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 1500.00, 0.00, '{"energy":0,"computer":0,"laser":0,"plasma":0,"shield":0,"armour":0,"warp":0,"astro":0,"ai":0}', 12345, NOW() 
-);
 
 -- ------------------------------------------------------------
--- 2. Galaxy systems (6×6 grid)
+-- 3. Player 1's local galaxy systems (6×6 grid)
 --    Star types: ⭐ 🌟 ✨ 🔆
 -- ------------------------------------------------------------
-INSERT INTO systems (x, y, star) VALUES
-(1,1,'⭐'),(1,2,'🌟'),(1,3,'✨'),(1,4,'🔆'),(1,5,'⭐'),(1,6,'🌟'),
-(2,1,'🌟'),(2,2,'✨'),(2,3,'🔆'),(2,4,'⭐'),(2,5,'🌟'),(2,6,'✨'),
-(3,1,'✨'),(3,2,'🔆'),(3,3,'⭐'),(3,4,'🌟'),(3,5,'✨'),(3,6,'🔆'),
-(4,1,'🔆'),(4,2,'⭐'),(4,3,'🌟'),(4,4,'✨'),(4,5,'🔆'),(4,6,'⭐'),
-(5,1,'🌟'),(5,2,'✨'),(5,3,'🔆'),(5,4,'⭐'),(5,5,'🌟'),(5,6,'✨'),
-(6,1,'✨'),(6,2,'🔆'),(6,3,'⭐'),(6,4,'🌟'),(6,5,'✨'),(6,6,'🔆');
+INSERT INTO systems (player_id, x, y, star, known) VALUES
+(1,1,1,'⭐',0),(1,1,2,'🌟',0),(1,1,3,'✨',0),(1,1,4,'🔆',0),(1,1,5,'⭐',0),(1,1,6,'🌟',0),
+(1,2,1,'🌟',0),(1,2,2,'✨',0),(1,2,3,'🔆',0),(1,2,4,'⭐',0),(1,2,5,'🌟',0),(1,2,6,'✨',0),
+(1,3,1,'✨',0),(1,3,2,'🔆',0),(1,3,3,'⭐',1),(1,3,4,'🌟',0),(1,3,5,'✨',0),(1,3,6,'🔆',0),
+(1,4,1,'🔆',0),(1,4,2,'⭐',0),(1,4,3,'🌟',0),(1,4,4,'✨',0),(1,4,5,'🔆',0),(1,4,6,'⭐',0),
+(1,5,1,'🌟',0),(1,5,2,'✨',0),(1,5,3,'🔆',0),(1,5,4,'⭐',0),(1,5,5,'🌟',0),(1,5,6,'✨',0),
+(1,6,1,'✨',0),(1,6,2,'🔆',0),(1,6,3,'⭐',0),(1,6,4,'🌟',0),(1,6,5,'✨',0),(1,6,6,'🔆',0);
 
 -- ------------------------------------------------------------
--- 3. Planets per system (including alien/pirate bases)
---    Each system has 3–5 planets.
---    Alien bases are marked is_pirate=1 with tier, loot, and def.
+-- 4. Planets per system (including alien/pirate bases). Each system has
+--    3–5 planets. Pirate garrisons live in `pirate_defense`, one row per
+--    ship type, below.
 -- ------------------------------------------------------------
 
--- System (1,1): 3 planets
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(1,1,1,'arid',85,0,0,0,NULL),
-(1,1,2,'gas',10,0,0,0,NULL),
-(1,1,3,'asteroid',65,0,0,0,NULL);
+INSERT INTO planets (player_id, x, y, slot, type, size, owner, pirate_tier, pirate_loot) VALUES
+(1,1,1,1,'arid',85,'empty',NULL,NULL),
+(1,1,1,2,'gas',10,'empty',NULL,NULL),
+(1,1,1,3,'asteroid',65,'empty',NULL,NULL),
 
--- System (1,2): 4 planets – ADD Alien base (slot 1)
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(1,2,1,'terran',90,1,2,1500,'{"fighter":12,"corvette":4}'),
-(1,2,2,'ocean',80,0,0,0,NULL),
-(1,2,3,'gas',12,0,0,0,NULL),
-(1,2,4,'barren',50,0,0,0,NULL);
+(1,1,2,1,'terran',90,'pirate',2,1500),
+(1,1,2,2,'ocean',80,'empty',NULL,NULL),
+(1,1,2,3,'gas',12,'empty',NULL,NULL),
+(1,1,2,4,'barren',50,'empty',NULL,NULL),
 
--- System (1,3): 4 planets – existing pirate (slot 2)
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(1,3,1,'desert',85,0,0,0,NULL),
-(1,3,2,'tundra',80,1,2,1200,'{"fighter":12,"corvette":4}'),
-(1,3,3,'asteroid',60,0,0,0,NULL),
-(1,3,4,'gas',9,0,0,0,NULL);
+(1,1,3,1,'desert',85,'empty',NULL,NULL),
+(1,1,3,2,'tundra',80,'pirate',2,1200),
+(1,1,3,3,'asteroid',60,'empty',NULL,NULL),
+(1,1,3,4,'gas',9,'empty',NULL,NULL),
 
--- System (1,4): 3 planets – ADD Alien base (slot 1)
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(1,4,1,'crystalline',75,1,3,2500,'{"fighter":20,"corvette":6,"frigate":2}'),
-(1,4,2,'magma',80,0,0,0,NULL),
-(1,4,3,'barren',45,0,0,0,NULL);
+(1,1,4,1,'crystalline',75,'pirate',3,2500),
+(1,1,4,2,'magma',80,'empty',NULL,NULL),
+(1,1,4,3,'barren',45,'empty',NULL,NULL),
 
--- System (1,5): 5 planets – ADD Alien base (slot 3)
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(1,5,1,'metallic',85,0,0,0,NULL),
-(1,5,2,'gas',11,0,0,0,NULL),
-(1,5,3,'terran',88,1,4,3800,'{"fighter":30,"corvette":10,"frigate":3,"destroyer":1}'),
-(1,5,4,'ocean',78,0,0,0,NULL),
-(1,5,5,'asteroid',62,0,0,0,NULL);
+(1,1,5,1,'metallic',85,'empty',NULL,NULL),
+(1,1,5,2,'gas',11,'empty',NULL,NULL),
+(1,1,5,3,'terran',88,'pirate',4,3800),
+(1,1,5,4,'ocean',78,'empty',NULL,NULL),
+(1,1,5,5,'asteroid',62,'empty',NULL,NULL),
 
--- System (1,6): 3 planets
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(1,6,1,'rocky',85,0,0,0,NULL),
-(1,6,2,'gas',10,0,0,0,NULL),
-(1,6,3,'barren',40,0,0,0,NULL);
+(1,1,6,1,'rocky',85,'empty',NULL,NULL),
+(1,1,6,2,'gas',10,'empty',NULL,NULL),
+(1,1,6,3,'barren',40,'empty',NULL,NULL),
 
--- System (2,1): 4 planets – ADD Alien base (slot 1)
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(2,1,1,'tundra',90,1,2,1600,'{"fighter":10,"corvette":5}'),
-(2,1,2,'asteroid',68,0,0,0,NULL),
-(2,1,3,'gas',11,0,0,0,NULL),
-(2,1,4,'desert',82,0,0,0,NULL);
+(1,2,1,1,'tundra',90,'pirate',2,1600),
+(1,2,1,2,'asteroid',68,'empty',NULL,NULL),
+(1,2,1,3,'gas',11,'empty',NULL,NULL),
+(1,2,1,4,'desert',82,'empty',NULL,NULL),
 
--- System (2,2): 4 planets – existing pirate (slot 3)
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(2,2,1,'gaia',88,0,0,0,NULL),
-(2,2,2,'ocean',76,0,0,0,NULL),
-(2,2,3,'crater',85,1,3,2500,'{"fighter":20,"corvette":6,"frigate":2}'),
-(2,2,4,'gas',12,0,0,0,NULL);
+(1,2,2,1,'gaia',88,'empty',NULL,NULL),
+(1,2,2,2,'ocean',76,'empty',NULL,NULL),
+(1,2,2,3,'craters',85,'pirate',3,2500),
+(1,2,2,4,'gas',12,'empty',NULL,NULL),
 
--- System (2,3): 3 planets – ADD Alien base (slot 1)
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(2,3,1,'radioactive',90,1,3,2200,'{"fighter":18,"corvette":5,"frigate":1}'),
-(2,3,2,'barren',45,0,0,0,NULL),
-(2,3,3,'gas',9,0,0,0,NULL);
+(1,2,3,1,'radioactive',90,'pirate',3,2200),
+(1,2,3,2,'barren',45,'empty',NULL,NULL),
+(1,2,3,3,'gas',9,'empty',NULL,NULL),
 
--- System (2,4): 4 planets
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(2,4,1,'toxic',88,0,0,0,NULL),
-(2,4,2,'terran',84,0,0,0,NULL),
-(2,4,3,'asteroid',60,0,0,0,NULL),
-(2,4,4,'gas',10,0,0,0,NULL);
+(1,2,4,1,'toxic',88,'empty',NULL,NULL),
+(1,2,4,2,'terran',84,'empty',NULL,NULL),
+(1,2,4,3,'asteroid',60,'empty',NULL,NULL),
+(1,2,4,4,'gas',10,'empty',NULL,NULL),
 
--- System (2,5): 5 planets – existing pirate (slot 5)
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(2,5,1,'arid',92,0,0,0,NULL),
-(2,5,2,'ocean',74,0,0,0,NULL),
-(2,5,3,'gas',13,0,0,0,NULL),
-(2,5,4,'barren',48,0,0,0,NULL),
-(2,5,5,'metallic',80,1,4,3800,'{"fighter":30,"corvette":10,"frigate":4,"destroyer":1}');
+(1,2,5,1,'arid',92,'empty',NULL,NULL),
+(1,2,5,2,'ocean',74,'empty',NULL,NULL),
+(1,2,5,3,'gas',13,'empty',NULL,NULL),
+(1,2,5,4,'barren',48,'empty',NULL,NULL),
+(1,2,5,5,'metallic',80,'pirate',4,3800),
 
--- System (2,6): 3 planets – ADD Alien base (slot 1)
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(2,6,1,'jungle',82,1,1,900,'{"fighter":8,"corvette":2}'),
-(2,6,2,'asteroid',65,0,0,0,NULL),
-(2,6,3,'gas',11,0,0,0,NULL);
+(1,2,6,1,'jungle',82,'pirate',1,900),
+(1,2,6,2,'asteroid',65,'empty',NULL,NULL),
+(1,2,6,3,'gas',11,'empty',NULL,NULL),
 
--- System (3,1): 4 planets – ADD Alien base (slot 1)
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(3,1,1,'rocky',86,1,5,5500,'{"fighter":45,"corvette":15,"frigate":6,"destroyer":3,"cruiser":1}'),
-(3,1,2,'ocean',72,0,0,0,NULL),
-(3,1,3,'barren',42,0,0,0,NULL),
-(3,1,4,'gas',12,0,0,0,NULL);
+(1,3,1,1,'rocky',86,'pirate',5,5500),
+(1,3,1,2,'ocean',72,'empty',NULL,NULL),
+(1,3,1,3,'barren',42,'empty',NULL,NULL),
+(1,3,1,4,'gas',12,'empty',NULL,NULL),
 
--- System (3,2): 4 planets – existing pirate (slot 2)
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(3,2,1,'terran',92,0,0,0,NULL),
-(3,2,2,'crater',80,1,5,5000,'{"fighter":40,"corvette":12,"frigate":5,"destroyer":2,"cruiser":1}'),
-(3,2,3,'gas',9,0,0,0,NULL),
-(3,2,4,'asteroid',55,0,0,0,NULL);
+(1,3,2,1,'terran',92,'empty',NULL,NULL),
+(1,3,2,2,'craters',80,'pirate',5,5000),
+(1,3,2,3,'gas',9,'empty',NULL,NULL),
+(1,3,2,4,'asteroid',55,'empty',NULL,NULL),
 
--- System (3,3) – HOME SYSTEM for test player
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(3,3,1,'terran',16,0,0,0,NULL),   -- home base
-(3,3,2,'ocean',14,0,0,0,NULL),
-(3,3,3,'gas',10,0,0,0,NULL),
-(3,3,4,'barren',5,0,0,0,NULL);
+(1,3,3,1,'terran',16,'you',NULL,NULL),   -- home base (base_id set below)
+(1,3,3,2,'ocean',14,'empty',NULL,NULL),
+(1,3,3,3,'gas',10,'empty',NULL,NULL),
+(1,3,3,4,'barren',5,'empty',NULL,NULL),
 
--- System (3,4): 3 planets – ADD Alien base (slot 1)
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(3,4,1,'toxic',88,1,2,1700,'{"fighter":14,"corvette":4}'),
-(3,4,2,'asteroid',60,0,0,0,NULL),
-(3,4,3,'gas',11,0,0,0,NULL);
+(1,3,4,1,'toxic',88,'pirate',2,1700),
+(1,3,4,2,'asteroid',60,'empty',NULL,NULL),
+(1,3,4,3,'gas',11,'empty',NULL,NULL),
 
--- System (3,5): 4 planets
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(3,5,1,'metallic',84,0,0,0,NULL),
-(3,5,2,'ocean',78,0,0,0,NULL),
-(3,5,3,'barren',44,0,0,0,NULL),
-(3,5,4,'gas',10,0,0,0,NULL);
+(1,3,5,1,'metallic',84,'empty',NULL,NULL),
+(1,3,5,2,'ocean',78,'empty',NULL,NULL),
+(1,3,5,3,'barren',44,'empty',NULL,NULL),
+(1,3,5,4,'gas',10,'empty',NULL,NULL),
 
--- System (3,6): 4 planets – existing pirate (slot 3)
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(3,6,1,'radioactive',90,0,0,0,NULL),
-(3,6,2,'terran',86,0,0,0,NULL),
-(3,6,3,'crater',82,1,1,800,'{"fighter":8,"corvette":2}'),
-(3,6,4,'gas',12,0,0,0,NULL);
+(1,3,6,1,'radioactive',90,'empty',NULL,NULL),
+(1,3,6,2,'terran',86,'empty',NULL,NULL),
+(1,3,6,3,'craters',82,'pirate',1,800),
+(1,3,6,4,'gas',12,'empty',NULL,NULL),
 
--- System (4,1): 4 planets – ADD Alien base (slot 1)
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(4,1,1,'gaia',90,1,3,2800,'{"fighter":22,"corvette":7,"frigate":2}'),
-(4,1,2,'asteroid',62,0,0,0,NULL),
-(4,1,3,'ocean',74,0,0,0,NULL),
-(4,1,4,'gas',11,0,0,0,NULL);
+(1,4,1,1,'gaia',90,'pirate',3,2800),
+(1,4,1,2,'asteroid',62,'empty',NULL,NULL),
+(1,4,1,3,'ocean',74,'empty',NULL,NULL),
+(1,4,1,4,'gas',11,'empty',NULL,NULL),
 
--- System (4,2): 3 planets – existing pirate (slot 1)
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(4,2,1,'volcanic',80,1,3,2200,'{"fighter":15,"corvette":5,"frigate":1}'),
-(4,2,2,'barren',42,0,0,0,NULL),
-(4,2,3,'gas',9,0,0,0,NULL);
+(1,4,2,1,'volcanic',80,'pirate',3,2200),
+(1,4,2,2,'barren',42,'empty',NULL,NULL),
+(1,4,2,3,'gas',9,'empty',NULL,NULL),
 
--- System (4,3): 4 planets – ADD Alien base (slot 1)
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(4,3,1,'arid',92,1,4,3600,'{"fighter":28,"corvette":9,"frigate":3,"destroyer":1}'),
-(4,3,2,'desert',84,0,0,0,NULL),
-(4,3,3,'asteroid',60,0,0,0,NULL),
-(4,3,4,'gas',12,0,0,0,NULL);
+(1,4,3,1,'arid',92,'pirate',4,3600),
+(1,4,3,2,'desert',84,'empty',NULL,NULL),
+(1,4,3,3,'asteroid',60,'empty',NULL,NULL),
+(1,4,3,4,'gas',12,'empty',NULL,NULL),
 
--- System (4,4): 5 planets
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(4,4,1,'crystalline',72,0,0,0,NULL),
-(4,4,2,'ocean',76,0,0,0,NULL),
-(4,4,3,'barren',40,0,0,0,NULL),
-(4,4,4,'gas',11,0,0,0,NULL),
-(4,4,5,'terran',88,0,0,0,NULL);
+(1,4,4,1,'crystalline',72,'empty',NULL,NULL),
+(1,4,4,2,'ocean',76,'empty',NULL,NULL),
+(1,4,4,3,'barren',40,'empty',NULL,NULL),
+(1,4,4,4,'gas',11,'empty',NULL,NULL),
+(1,4,4,5,'terran',88,'empty',NULL,NULL),
 
--- System (4,5): 3 planets
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(4,5,1,'metallic',86,0,0,0,NULL),
-(4,5,2,'gas',10,0,0,0,NULL),
-(4,5,3,'asteroid',58,0,0,0,NULL);
+(1,4,5,1,'metallic',86,'empty',NULL,NULL),
+(1,4,5,2,'gas',10,'empty',NULL,NULL),
+(1,4,5,3,'asteroid',58,'empty',NULL,NULL),
 
--- System (4,6): 4 planets – existing pirate (slot 4)
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(4,6,1,'tundra',90,0,0,0,NULL),
-(4,6,2,'ocean',72,0,0,0,NULL),
-(4,6,3,'gas',13,0,0,0,NULL),
-(4,6,4,'magma',78,1,2,1500,'{"fighter":10,"corvette":3,"frigate":1}');
+(1,4,6,1,'tundra',90,'empty',NULL,NULL),
+(1,4,6,2,'ocean',72,'empty',NULL,NULL),
+(1,4,6,3,'gas',13,'empty',NULL,NULL),
+(1,4,6,4,'magma',78,'pirate',2,1500),
 
--- System (5,1): 3 planets – ADD Alien base (slot 1)
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(5,1,1,'rocky',88,1,2,1800,'{"fighter":12,"corvette":5}'),
-(5,1,2,'barren',42,0,0,0,NULL),
-(5,1,3,'gas',11,0,0,0,NULL);
+(1,5,1,1,'rocky',88,'pirate',2,1800),
+(1,5,1,2,'barren',42,'empty',NULL,NULL),
+(1,5,1,3,'gas',11,'empty',NULL,NULL),
 
--- System (5,2): 4 planets
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(5,2,1,'toxic',86,0,0,0,NULL),
-(5,2,2,'asteroid',62,0,0,0,NULL),
-(5,2,3,'terran',80,0,0,0,NULL),
-(5,2,4,'gas',12,0,0,0,NULL);
+(1,5,2,1,'toxic',86,'empty',NULL,NULL),
+(1,5,2,2,'asteroid',62,'empty',NULL,NULL),
+(1,5,2,3,'terran',80,'empty',NULL,NULL),
+(1,5,2,4,'gas',12,'empty',NULL,NULL),
 
--- System (5,3): 4 planets
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(5,3,1,'crystalline',74,0,0,0,NULL),
-(5,3,2,'ocean',76,0,0,0,NULL),
-(5,3,3,'barren',40,0,0,0,NULL),
-(5,3,4,'gas',9,0,0,0,NULL);
+(1,5,3,1,'crystalline',74,'empty',NULL,NULL),
+(1,5,3,2,'ocean',76,'empty',NULL,NULL),
+(1,5,3,3,'barren',40,'empty',NULL,NULL),
+(1,5,3,4,'gas',9,'empty',NULL,NULL),
 
--- System (5,4): 5 planets – existing pirate (slot 5)
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(5,4,1,'arid',90,0,0,0,NULL),
-(5,4,2,'desert',84,0,0,0,NULL),
-(5,4,3,'asteroid',60,0,0,0,NULL),
-(5,4,4,'gas',13,0,0,0,NULL),
-(5,4,5,'metallic',82,1,3,3000,'{"fighter":18,"corvette":6,"frigate":2,"destroyer":1}');
+(1,5,4,1,'arid',90,'empty',NULL,NULL),
+(1,5,4,2,'desert',84,'empty',NULL,NULL),
+(1,5,4,3,'asteroid',60,'empty',NULL,NULL),
+(1,5,4,4,'gas',13,'empty',NULL,NULL),
+(1,5,4,5,'metallic',82,'pirate',3,3000),
 
--- System (5,5): 3 planets – ADD Alien base (slot 1)
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(5,5,1,'radioactive',88,1,5,6000,'{"fighter":50,"corvette":18,"frigate":7,"destroyer":4,"cruiser":2}'),
-(5,5,2,'gas',10,0,0,0,NULL),
-(5,5,3,'barren',44,0,0,0,NULL);
+(1,5,5,1,'radioactive',88,'pirate',5,6000),
+(1,5,5,2,'gas',10,'empty',NULL,NULL),
+(1,5,5,3,'barren',44,'empty',NULL,NULL),
 
--- System (5,6): 4 planets
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(5,6,1,'terran',82,0,0,0,NULL),
-(5,6,2,'ocean',70,0,0,0,NULL),
-(5,6,3,'gas',11,0,0,0,NULL),
-(5,6,4,'asteroid',55,0,0,0,NULL);
+(1,5,6,1,'terran',82,'empty',NULL,NULL),
+(1,5,6,2,'ocean',70,'empty',NULL,NULL),
+(1,5,6,3,'gas',11,'empty',NULL,NULL),
+(1,5,6,4,'asteroid',55,'empty',NULL,NULL),
 
--- System (6,1): 4 planets – ADD Alien base (slot 1)
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(6,1,1,'rocky',84,1,3,2400,'{"fighter":20,"corvette":6,"frigate":2}'),
-(6,1,2,'barren',38,0,0,0,NULL),
-(6,1,3,'gas',12,0,0,0,NULL),
-(6,1,4,'desert',80,0,0,0,NULL);
+(1,6,1,1,'rocky',84,'pirate',3,2400),
+(1,6,1,2,'barren',38,'empty',NULL,NULL),
+(1,6,1,3,'gas',12,'empty',NULL,NULL),
+(1,6,1,4,'desert',80,'empty',NULL,NULL),
 
--- System (6,2): 3 planets – existing pirate (slot 3)
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(6,2,1,'gaia',86,0,0,0,NULL),
-(6,2,2,'ocean',74,0,0,0,NULL),
-(6,2,3,'crater',78,1,4,3500,'{"fighter":25,"corvette":8,"frigate":3,"destroyer":2}');
+(1,6,2,1,'gaia',86,'empty',NULL,NULL),
+(1,6,2,2,'ocean',74,'empty',NULL,NULL),
+(1,6,2,3,'craters',78,'pirate',4,3500),
 
--- System (6,3): 4 planets
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(6,3,1,'metallic',82,0,0,0,NULL),
-(6,3,2,'gas',10,0,0,0,NULL),
-(6,3,3,'asteroid',58,0,0,0,NULL),
-(6,3,4,'terran',84,0,0,0,NULL);
+(1,6,3,1,'metallic',82,'empty',NULL,NULL),
+(1,6,3,2,'gas',10,'empty',NULL,NULL),
+(1,6,3,3,'asteroid',58,'empty',NULL,NULL),
+(1,6,3,4,'terran',84,'empty',NULL,NULL),
 
--- System (6,4): 4 planets – ADD Alien base (slot 1)
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(6,4,1,'crystalline',70,1,4,3400,'{"fighter":26,"corvette":8,"frigate":3,"destroyer":1}'),
-(6,4,2,'barren',42,0,0,0,NULL),
-(6,4,3,'gas',11,0,0,0,NULL),
-(6,4,4,'ocean',72,0,0,0,NULL);
+(1,6,4,1,'crystalline',70,'pirate',4,3400),
+(1,6,4,2,'barren',42,'empty',NULL,NULL),
+(1,6,4,3,'gas',11,'empty',NULL,NULL),
+(1,6,4,4,'ocean',72,'empty',NULL,NULL),
 
--- System (6,5): 3 planets
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(6,5,1,'radioactive',88,0,0,0,NULL),
-(6,5,2,'asteroid',60,0,0,0,NULL),
-(6,5,3,'gas',10,0,0,0,NULL);
+(1,6,5,1,'radioactive',88,'empty',NULL,NULL),
+(1,6,5,2,'asteroid',60,'empty',NULL,NULL),
+(1,6,5,3,'gas',10,'empty',NULL,NULL),
 
--- System (6,6): 4 planets – existing pirate (slot 2)
-INSERT INTO planets (x, y, slot, type, size, is_pirate, pirate_tier, pirate_loot, pirate_def)
-VALUES
-(6,6,1,'arid',90,0,0,0,NULL),
-(6,6,2,'magma',80,1,2,1100,'{"fighter":9,"corvette":3}'),
-(6,6,3,'gas',12,0,0,0,NULL),
-(6,6,4,'barren',40,0,0,0,NULL);
+(1,6,6,1,'arid',90,'empty',NULL,NULL),
+(1,6,6,2,'magma',80,'pirate',2,1100),
+(1,6,6,3,'gas',12,'empty',NULL,NULL),
+(1,6,6,4,'barren',40,'empty',NULL,NULL);
 
 -- ------------------------------------------------------------
--- 4. Home base for test player at (3,3):1
+-- 5. Pirate garrisons — one row per ship type per pirate planet, replacing
+--    the old JSON pirate_def blob.
 -- ------------------------------------------------------------
-UPDATE planets
-SET owner_player_id = 1,
-    is_pirate = 0
-WHERE x = 3 AND y = 3 AND slot = 1;
+INSERT INTO pirate_defense (player_id, x, y, slot, ship_key, qty) VALUES
+(1,1,2,1,'fighter',12),(1,1,2,1,'corvette',4),
+(1,1,3,2,'fighter',12),(1,1,3,2,'corvette',4),
+(1,1,4,1,'fighter',20),(1,1,4,1,'corvette',6),(1,1,4,1,'frigate',2),
+(1,1,5,3,'fighter',30),(1,1,5,3,'corvette',10),(1,1,5,3,'frigate',3),(1,1,5,3,'destroyer',1),
+(1,2,1,1,'fighter',10),(1,2,1,1,'corvette',5),
+(1,2,2,3,'fighter',20),(1,2,2,3,'corvette',6),(1,2,2,3,'frigate',2),
+(1,2,3,1,'fighter',18),(1,2,3,1,'corvette',5),(1,2,3,1,'frigate',1),
+(1,2,5,5,'fighter',30),(1,2,5,5,'corvette',10),(1,2,5,5,'frigate',4),(1,2,5,5,'destroyer',1),
+(1,2,6,1,'fighter',8),(1,2,6,1,'corvette',2),
+(1,3,1,1,'fighter',45),(1,3,1,1,'corvette',15),(1,3,1,1,'frigate',6),(1,3,1,1,'destroyer',3),(1,3,1,1,'cruiser',1),
+(1,3,2,2,'fighter',40),(1,3,2,2,'corvette',12),(1,3,2,2,'frigate',5),(1,3,2,2,'destroyer',2),(1,3,2,2,'cruiser',1),
+(1,3,4,1,'fighter',14),(1,3,4,1,'corvette',4),
+(1,3,6,3,'fighter',8),(1,3,6,3,'corvette',2),
+(1,4,1,1,'fighter',22),(1,4,1,1,'corvette',7),(1,4,1,1,'frigate',2),
+(1,4,2,1,'fighter',15),(1,4,2,1,'corvette',5),(1,4,2,1,'frigate',1),
+(1,4,3,1,'fighter',28),(1,4,3,1,'corvette',9),(1,4,3,1,'frigate',3),(1,4,3,1,'destroyer',1),
+(1,4,6,4,'fighter',10),(1,4,6,4,'corvette',3),(1,4,6,4,'frigate',1),
+(1,5,1,1,'fighter',12),(1,5,1,1,'corvette',5),
+(1,5,4,5,'fighter',18),(1,5,4,5,'corvette',6),(1,5,4,5,'frigate',2),(1,5,4,5,'destroyer',1),
+(1,5,5,1,'fighter',50),(1,5,5,1,'corvette',18),(1,5,5,1,'frigate',7),(1,5,5,1,'destroyer',4),(1,5,5,1,'cruiser',2),
+(1,6,1,1,'fighter',20),(1,6,1,1,'corvette',6),(1,6,1,1,'frigate',2),
+(1,6,2,3,'fighter',25),(1,6,2,3,'corvette',8),(1,6,2,3,'frigate',3),(1,6,2,3,'destroyer',2),
+(1,6,4,1,'fighter',26),(1,6,4,1,'corvette',8),(1,6,4,1,'frigate',3),(1,6,4,1,'destroyer',1),
+(1,6,6,2,'fighter',9),(1,6,6,2,'corvette',3);
 
-INSERT INTO bases (
-    id, player_id, name, x, y, slot, size, structures, fleet, queue, created_at 
-) VALUES (
-    1, 1, 'Homeworld', 3, 3, 1, 16, '{"solar":5,"metro":3,"lab":2,"robotic":2,"shipyard":1,"spaceport":1}', '{"fighter":5,"scout":2}', '[]', NOW()
+-- ------------------------------------------------------------
+-- 6. Home base for the test commander at (3,3):1
+-- ------------------------------------------------------------
+INSERT INTO bases (id, player_id, name, x, y, slot, address, size, created_at) VALUES
+    (1, 1, 'Homeworld', 3, 3, 1, NULL, 16, NOW());
+
+UPDATE planets SET base_id = 1 WHERE player_id = 1 AND x = 3 AND y = 3 AND slot = 1;
+
+INSERT INTO base_structures (base_id, struct_key, level) VALUES
+    (1, 'solar', 5), (1, 'metro', 3), (1, 'lab', 2), (1, 'robotic', 2), (1, 'shipyard', 1), (1, 'spaceport', 1);
+
+-- Garrison ships are not a bare per-base table — they are the base's own
+-- "garrison" fleet (mission='garrison', phase='garrison', garrison_of=1),
+-- and its ships live in fleet_ships like any other fleet's. The Outpost
+-- Ship sits here as cargo: it only becomes a base once dispatched and
+-- actually lands (see galaxyService.ts).
+INSERT INTO fleets (id, player_id, origin_base_id, mission, ox, oy, phase, garrison_of, arrive_at, leg) VALUES
+    (1, 1, 1, 'garrison', 3, 3, 'garrison', 1, 0, 0);
+
+INSERT INTO fleet_ships (fleet_id, ship_key, qty) VALUES
+    (1, 'fighter', 5), (1, 'scout', 2), (1, 'colony', 1);
+
+-- ------------------------------------------------------------
+-- 7. Done — commanders, systems, planets, bases, structures and every
+--    garrisoned ship above are rows in the DB, never JSON, never client state.
+-- ------------------------------------------------------------
+
+
+
+-- 1. Ensure every player's home base has a garrison fleet to hold ships in.
+INSERT INTO fleets (player_id, origin_base_id, mission, ox, oy, phase, garrison_of, arrive_at, leg)
+SELECT home.player_id, home.base_id, 'garrison', b.x, b.y, 'garrison', home.base_id, 0, 0
+FROM (
+    SELECT player_id, MIN(id) AS base_id
+    FROM bases
+    GROUP BY player_id
+) home
+JOIN bases b ON b.id = home.base_id
+WHERE NOT EXISTS (
+    SELECT 1 FROM fleets f WHERE f.garrison_of = home.base_id
 );
 
-UPDATE planets SET base_id = 1 WHERE x = 3 AND y = 3 AND slot = 1;
-
--- ------------------------------------------------------------
--- 5. Done
--- ------------------------------------------------------------
+-- 2. Add (or increment) one Outpost Ship in that garrison fleet.
+INSERT INTO fleet_ships (fleet_id, ship_key, qty)
+SELECT f.id, 'colony', 1
+FROM fleets f
+JOIN (
+    SELECT player_id, MIN(id) AS base_id
+    FROM bases
+    GROUP BY player_id
+) home ON home.base_id = f.garrison_of
+ON DUPLICATE KEY UPDATE qty = qty + 1;
