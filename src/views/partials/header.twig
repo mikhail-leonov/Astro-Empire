@@ -1,23 +1,21 @@
 <header class="topbar">
-    <a class="brand" href="/">
-        <span class="logo">🌌</span>
-        <span class="brandtext"><b>ASTRO EMPIRE</b><small>Command Console</small></span>
-    </a>
-    <nav class="topnav">
-        {% if currentUser %}
-            <span class="who">● {{ currentUser.username }}</span>
-            {% if currentUser.role == 'admin' %}
-                <a class="navlink" href="/admin">Admin</a>
-            {% endif %}
-            <a class="navlink" href="/play">Play</a>
-            <a class="navlink" href="/account">Account</a>
-            <form method="POST" action="/logout" class="inline">
-                <input type="hidden" name="_csrf" value="{{ csrfToken }}">
-                <button type="submit" class="navlink btn-link">Log out</button>
-            </form>
-        {% else %}
-            <a class="navlink" href="/login">Log in</a>
-            <a class="navlink primary" href="/register">Register</a>
-        {% endif %}
-    </nav>
+  <a class="brand" href="/">
+    <div class="logo">🌌</div>
+    <div class="brandtext"><span>Astro Empire</span><small>4X Command</small></div>
+  </a>
+  <nav class="topnav">
+    {% if currentUser %}
+      <span class="who">Commander {{ currentUser.username }}</span>
+      <a class="navlink primary" href="/play">Play</a>
+      <a class="navlink" href="/account">Account</a>
+      {% if currentUser.role == 'admin' %}<a class="navlink" href="/admin">Admin</a>{% endif %}
+      <form class="inline" method="post" action="/logout" data-confirm="Log out?">
+        <input type="hidden" name="_csrf" value="{{ csrfToken }}">
+        <button class="btn-link navlink" type="submit">Log out</button>
+      </form>
+    {% else %}
+      <a class="navlink" href="/login">Log in</a>
+      <a class="navlink primary" href="/register">Sign up</a>
+    {% endif %}
+  </nav>
 </header>

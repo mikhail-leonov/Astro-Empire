@@ -1,16 +1,16 @@
-{% extends "layout.twig" %}
+{% extends 'layout.twig' %}
 {% block content %}
 <section class="hero">
-    <div class="logo-xl">🌌</div>
-    <h1>Astro Empire</h1>
-    <p class="lede">Forge a galactic empire. Create your commander profile to begin.</p>
-    <div class="cta-row">
-        {% if currentUser %}
-            <a class="btn btn-primary" href="/account">Go to your account</a>
-        {% else %}
-            <a class="btn btn-primary" href="/register">Create account</a>
-            <a class="btn btn-ghost" href="/login">Log in</a>
-        {% endif %}
-    </div>
+  <div class="logo-xl">🌌</div>
+  <h1>Astro Empire</h1>
+  <p class="lede">Build a galactic empire: research technology, construct bases, generate a living galaxy, and send fleets to colonize or conquer.</p>
+  <div class="cta-row">
+    {% if currentUser %}
+      <a class="btn primary big" href="/play">▶ Continue Empire</a>
+    {% else %}
+      <a class="btn primary big" href="/register">🚀 Start Playing</a>
+      <a class="btn ghost big" href="/login">Log in</a>
+    {% endif %}
+  </div>
 </section>
 {% endblock %}

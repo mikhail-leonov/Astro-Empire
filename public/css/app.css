@@ -432,6 +432,7 @@ a{color:var(--cyan);text-decoration:none}
    every .twig view stays HTML-only with no inline <style>. */
 body{overflow:auto}
 #app{display:flex;flex-direction:column;min-height:100%}
+#astro-game{flex:1;min-height:0;display:flex;flex-direction:column}
 .topbar .brand{color:inherit;text-decoration:none}
 .brandtext{display:flex;flex-direction:column;line-height:1.15}
 .brandtext small{font-size:9px;letter-spacing:2px;color:var(--cyan-dim);text-transform:uppercase}

@@ -1,7 +1,7 @@
-{% if flash and flash|length %}
-    <div class="flashes">
-        {% for f in flash %}
-            <div class="flash flash-{{ f.type }}">{{ f.message }}</div>
-        {% endfor %}
-    </div>
+{% if flashes and flashes|length > 0 %}
+<div class="flashes">
+  {% for f in flashes %}
+    <div class="flash flash-{{ f.type }}">{{ f.message }}</div>
+  {% endfor %}
+</div>
 {% endif %}

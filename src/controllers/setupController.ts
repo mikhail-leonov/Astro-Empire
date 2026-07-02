@@ -22,7 +22,12 @@ export function showSetup(_req: Request, res: Response): void {
     res.redirect('/');
     return;
   }
-  res.render('setup', { title: 'Database setup', errors: {}, old: currentValues() });
+  const lastError = db.getLastError();
+  res.render('setup', {
+    title: 'Database setup',
+    errors: lastError ? { _form: `Last connection attempt failed: ${lastError}` } : {},
+    old: currentValues(),
+  });
 }
 
 /* ---------------------------------------------------------- POST /setup */
@@ -52,6 +57,13 @@ export async function saveSetup(req: Request, res: Response): Promise<void> {
   // 1. Validate credentials, create the database + tables if missing.
   const ensured = await db.ensureDatabase(cfg);
   if (!ensured.ok) {
+    // FIX: record the failure so isReady() keeps reporting "not ready" and
+    // GET /setup keeps showing this reason, instead of the person being
+    // bounced back here with no explanation, or — worse — later ending up
+    // stuck at a dead end where isReady() falsely reports true and /setup
+    // just redirects to '/' with no way back in (see db.isReady() for why
+    // that used to happen).
+    db.setLastError(ensured.error);
     res.status(422).render('setup', {
       title: 'Database setup',
       errors: { _form: `Could not connect: ${ensured.error}` },
@@ -65,6 +77,14 @@ export async function saveSetup(req: Request, res: Response): Promise<void> {
   db.init(cfg);
   const healthy = await db.healthCheck();
   if (!healthy) {
+    // FIX: db.init(cfg) above already pointed the pool at this (apparently
+    // bad) config, which used to make isReady() report true from that point
+    // on — locking the person out of /setup on every subsequent request
+    // even though the connection never actually worked. Reset the pool and
+    // flag the failure so isReady() goes back to false and the form is
+    // reachable again.
+    await db.reset();
+    db.setLastError('Database created but the connection test failed. Please re-check the details.');
     res.status(422).render('setup', {
       title: 'Database setup',
       errors: { _form: 'Database created but the connection test failed. Please re-check the details.' },
@@ -72,6 +92,7 @@ export async function saveSetup(req: Request, res: Response): Promise<void> {
     });
     return;
   }
+  db.setLastError(null);
 
   // 3. Persist settings to .env (also generate a session secret if still default).
   const envUpdates: Record<string, string> = {

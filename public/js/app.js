@@ -70,7 +70,7 @@
     tundra:  { name: "Tundra",   icon: "🏔️", hab: true },
     gas:     { name: "Gas Giant", icon: "🪐", hab: false },
     asteroid:{ name: "Asteroid", icon: "🌑", hab: false },
-    barren:  { name: "Barren",   icon: "⚪", hab: false }
+    barren:  { name: "Barren",   icon: "⚫", hab: false }
   };
 
   function fmt(n) {
@@ -294,7 +294,7 @@
     var h = '<div class="view-title">Empire Overview</div><div class="grid cols-3">';
     h += '<div class="panel"><h3>Empire</h3>' +
       kv("Bases", S.bases.length + " / " + S.maxBases) +
-      kv("Economy", fmt(econ) + " ₢/h") +
+      kv("Economy", fmt(econ) + " ₤/h") +
       kv("Research", fmt(res) + " rp/h") +
       kv("Fleet power", fmt(empireFleetPower(S))) +
       kv("Fleets in transit", S.fleets.length) +
@@ -306,7 +306,7 @@
       var coord = b.address || (b.x + ':' + b.y + ':' + b.slot);
       bl += '<div class="row" data-action="gobase" data-base="' + b.id + '" style="cursor:pointer">' +
         '<div class="ic">🏙️</div><div class="nm"><div class="t">' + esc(b.name) + ' <span class="coordtag">' + coord + '</span></div>' +
-        '<div class="d">Econ ' + fmt(baseCreditsDisplay(b.struct, S.techs)) + ' ₢/h · Energy ' + e.prod + '/' + e.cons + (e.prod < e.cons ? ' ⚠' : '') + '</div></div>' +
+        '<div class="d">Econ ' + fmt(baseCreditsDisplay(b.struct, S.techs)) + ' ₤/h · Energy ' + e.prod + '/' + e.cons + (e.prod < e.cons ? ' ⚠' : '') + '</div></div>' +
         '<div class="lvl">' + slotsUsed(b.struct) + '/' + slotsMax(b.struct, b.size) + '</div></div>';
     });
     bl += '</div>'; h += bl;
@@ -340,17 +340,17 @@
         '<div class="nm"><div class="t">' + d.name + '</div><div class="d">' + d.desc +
           (okReq ? "" : ' <span class="tag2 lock">🔒 ' + reqText(d.req) + '</span>') + '</div></div>' +
         '<div class="lvl">L' + lvl + '</div>' +
-        '<div style="text-align:right"><div class="cost">' + fmt(cost) + ' ₢</div>' +
+        '<div style="text-align:right"><div class="cost">' + fmt(cost) + ' ₤</div>' +
         '<button class="btn sm" style="margin-top:5px" data-action="upgrade" data-base="' + base.id + '" data-key="' + k + '"' +
           (okReq && afford && !slotsFull ? "" : " disabled") + '>Upgrade</button></div>' +
         '</div>';
     });
     sh += '</div>';
-    var rp = '<div class="panel"><h3>Power & Economy</h3>' +
+    var rp = '<div class="panel"><h3>Power &amp; Economy</h3>' +
       kv("Energy output", e.prod) +
       kvWarn("Energy used", e.cons, e.cons > e.prod) +
       kvWarn("Efficiency", Math.round(eff * 100) + "%", eff < 1) +
-      kv("Credits", fmt(baseCreditsDisplay(base.struct, S.techs)) + " ₢/h") +
+      kv("Credits", fmt(baseCreditsDisplay(base.struct, S.techs)) + " ₤/h") +
       kv("Research", fmt(baseResearchDisplay(base.struct, S.techs)) + " rp/h") +
       '</div>';
     rp += '<div class="panel"><h3>Build Queue <span class="tag">' + base.queue.length + '/' + S.queueMax + '</span></h3>' + queueHtml(base) + '</div>';
@@ -382,7 +382,7 @@
       rp += '<div class="qitem"><div class="ic">' + TECH[k].icon + '</div>' +
         '<div class="qt"><b>' + TECH[k].name + '</b> → L' + (((S.techs && S.techs[k]) || 0) + 1) + '</div>' +
         '<div class="qtimer" data-finish="' + S.research.finishAt + '"></div>' +
-        '<button class="btn sm danger" data-action="cancelres">✕</button></div>' +
+        '<button class="btn sm danger" data-action="cancelres">✗</button></div>' +
         '<div class="bar"><span data-bar="' + S.research.finishAt + '" data-dur="' + S.research.dur + '"></span></div>';
     } else rp += '<div class="empty">No active research. Pick a technology to advance.</div>';
     rp += '</div>';
@@ -411,7 +411,7 @@
         '<div class="nm"><div class="t">' + d.name + (d.colony ? ' <span class="tag2 ok">colony</span>' : '') + '</div>' +
         '<div class="d">' + d.desc + '<br>⚔ ' + Math.round(es.atk) + ' · ❤ ' + Math.round(es.hp) + ' · 🚀 ' + d.speed +
           (okReq ? "" : ' <span class="tag2 lock">🔒 ' + reqText(d.req) + '</span>') + '</div></div>' +
-        '<div style="text-align:right"><div class="cost">' + fmt(cost) + ' ₢</div>' +
+        '<div style="text-align:right"><div class="cost">' + fmt(cost) + ' ₤</div>' +
         '<div style="display:flex;gap:5px;margin-top:5px;justify-content:flex-end">' +
           '<button class="btn sm" data-action="buildship" data-base="' + base.id + '" data-key="' + k + '" data-qty="1"' + (okReq && afford ? "" : " disabled") + '>+1</button>' +
           '<button class="btn sm" data-action="buildship" data-base="' + base.id + '" data-key="' + k + '" data-qty="5"' + (okReq && afford ? "" : " disabled") + '>+5</button>' +
@@ -467,7 +467,7 @@
           d += '<div class="planet"><div class="pic">' + t.icon + '</div>' +
             '<div class="pn"><div class="t">' + t.name + ' <span class="coordtag">' + sys2.x + ':' + sys2.y + ':' + p.slot + '</span></div>' +
             '<div class="d">Size ' + p.size + ' · ' + badge +
-              (p.owner === "pirate" ? ' · loot ~' + fmt(p.loot) + ' ₢' : '') + '</div></div>' +
+              (p.owner === "pirate" ? ' · loot ~' + fmt(p.loot) + ' ₤' : '') + '</div></div>' +
             '<button class="btn sm ghost" data-action="target" data-x="' + sys2.x + '" data-y="' + sys2.y + '" data-slot="' + p.slot + '">Target</button>' +
             '</div>';
         });
@@ -556,7 +556,7 @@
       h += '<div class="qitem"><div class="ic">' + ic + '</div>' +
         '<div class="qt"><b>' + nm + '</b></div>' +
         '<div class="qtimer" data-finish="' + q.finishAt + '"></div>' +
-        '<button class="btn sm danger" data-action="cancel" data-base="' + base.id + '" data-idx="' + i + '">✕</button></div>';
+        '<button class="btn sm danger" data-action="cancel" data-base="' + base.id + '" data-idx="' + i + '">✗</button></div>';
       if (i === 0) h += '<div class="bar"><span data-bar="' + q.finishAt + '" data-dur="' + q.dur + '"></span></div>';
     });
     return h;
@@ -582,7 +582,7 @@
 
   /* ---------------- dynamic refresh (timers only; no full re-render) ---------------- */
   function updateDynamic() {
-    setTxt("st-credits", fmt(S.credits) + " ₢");
+    setTxt("st-credits", fmt(S.credits) + " ₤");
     setTxt("st-rp", fmt(S.rp) + " rp");
     setTxt("st-econ", fmt(empireEconomy(S)) + "<small> /h</small>");
     setTxt("st-res", fmt(empireResearch(S)) + "<small> /h</small>");

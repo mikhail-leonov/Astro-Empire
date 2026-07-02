@@ -587,7 +587,7 @@
       "Click a star on the map to inspect its astros. Generating grants " +
       "<b>100,000,000</b> credits to build with.</div>";
     R += '<div class="ggactions">' +
-      '<button class="btn big" data-gg="generate">✦ Generate Galaxy</button>' +
+      '<button class="btn big" data-gg="generate">✨ Generate Galaxy</button>' +
       '<button class="btn ghost" data-gg="reseed">🎲 Reseed</button></div>';
     R += "</div>";
 
@@ -690,7 +690,7 @@
         pad(regionNo(gg.region.sx, gg.region.sy, gg.size), 2) + "</span></h3>" +
         '<button class="btn ghost" data-gg="nav" data-to="galaxy">← Galaxy</button>' +
         regionGrid(gg) +
-        '<div class="ggnote">10×10 systems in this region. ✦ marks a star — ' +
+        '<div class="ggnote">10×10 systems in this region. ✨ marks a star — ' +
         "click one to open its system.</div></div>";
     }
     return '<div class="panel galaxypanel"><h3>Galaxy <span class="tag">' + gg.size + "×" +
@@ -884,7 +884,7 @@
           h += '<i class="gcell star" data-gg="system" data-sx="' + sx +
             '" data-sy="' + sy + '" data-subx="' + x + '" data-suby="' + y +
             '" title="' + systemAddress(rep.prefix, rep.number, sx, sy, x, y, gg.size) +
-            '">✦</i>';
+            '">✨</i>';
         } else {
           h += '<i class="gcell"></i>';
         }
@@ -993,7 +993,7 @@
       : astroImg(a.astro.type, "astro-photo");
 
     var h = '<div class="astro-modal" data-gg="astro-close">' +
-      '<div class="astro-card" data-gg="stop"><button class="amclose" data-gg="astro-close">✕</button>' +
+      '<div class="astro-card" data-gg="stop"><button class="amclose" data-gg="astro-close">✗</button>' +
       '<div class="astro-figure">' + img +
       (owned ? '<span class="base-flag" title="Colonised">⌂</span>' : "") + "</div>";
     h += '<div class="astro-info"><div class="astro-name">' + name +
@@ -1146,7 +1146,7 @@
     var tab = gg.baseTab || "overview";
 
     var h = '<div class="astro-modal" data-gg="astro-close">' +
-      '<div class="base-screen" data-gg="stop"><button class="amclose" data-gg="astro-close">✕</button>';
+      '<div class="base-screen" data-gg="stop"><button class="amclose" data-gg="astro-close">✗</button>';
 
     // top bar: name + address + vitals + economy
     h += '<div class="bv-top"><div class="bv-headl">' +
@@ -1155,11 +1155,11 @@
       '<div class="bv-res">' +
         resChip("👤", "Population", base.pop.cur + "/" + base.pop.max, "#8ef0a0") +
         resChip("⚡", "Energy", base.energy.cur + "/" + base.energy.max, "#ffd76a") +
-        resChip("▪", "Area", base.areaUsed + "/" + base.areaTotal, "#7fd1ff") +
+        resChip("▬", "Area", base.areaUsed + "/" + base.areaTotal, "#7fd1ff") +
         resChip("⛏", "Metal", "+" + base.rates.metal, "#cdd6e3") +
         resChip("◔", "Gas", "+" + base.rates.gas, "#ff9e6a") +
         resChip("◆", "Crystal", "+" + base.rates.crystal, "#c9a6ff") +
-        resChip("⚙", "Research", "+" + base.rates.research, "#9ad0ff") +
+        resChip("⚗", "Research", "+" + base.rates.research, "#9ad0ff") +
       "</div></div>";
 
     // main tabs

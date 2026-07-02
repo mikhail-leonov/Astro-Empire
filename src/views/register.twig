@@ -1,50 +1,37 @@
-{% extends "layout.twig" %}
+{% extends 'layout.twig' %}
 {% block content %}
-<section class="card auth-card">
-    <h2>Create your account</h2>
-    <p class="muted">Register a commander profile to enter the galaxy.</p>
-
-    <form method="POST" action="/register" novalidate>
-        <input type="hidden" name="_csrf" value="{{ csrfToken }}">
-
-        <label class="field">
-            <span>Username</span>
-            <input type="text" name="username" autocomplete="username"
-                   value="{{ old.username | default('') }}"
-                   class="{{ errors.username ? 'is-invalid' : '' }}"
-                   maxlength="32" required autofocus>
-            {% if errors.username %}<small class="err">{{ errors.username }}</small>{% endif %}
-        </label>
-
-        <label class="field">
-            <span>Email</span>
-            <input type="email" name="email" autocomplete="email"
-                   value="{{ old.email | default('') }}"
-                   class="{{ errors.email ? 'is-invalid' : '' }}"
-                   maxlength="255" required>
-            {% if errors.email %}<small class="err">{{ errors.email }}</small>{% endif %}
-        </label>
-
-        <label class="field">
-            <span>Password</span>
-            <input type="password" name="password" autocomplete="new-password"
-                   class="{{ errors.password ? 'is-invalid' : '' }}"
-                   minlength="8" required>
-            {% if errors.password %}<small class="err">{{ errors.password }}</small>
-            {% else %}<small class="hint">At least 8 characters.</small>{% endif %}
-        </label>
-
-        <label class="field">
-            <span>Confirm password</span>
-            <input type="password" name="confirm" autocomplete="new-password"
-                   class="{{ errors.confirm ? 'is-invalid' : '' }}"
-                   minlength="8" required>
-            {% if errors.confirm %}<small class="err">{{ errors.confirm }}</small>{% endif %}
-        </label>
-
-        <button type="submit" class="btn btn-primary btn-block">Create account</button>
-    </form>
-
-    <p class="alt">Already have an account? <a href="/login">Log in</a>.</p>
+<section class="card">
+  <h2>Create your account</h2>
+  <p class="muted">Found your empire in seconds.</p>
+  {% if errors._form %}<div class="flash flash-error">{{ errors._form }}</div>{% endif %}
+  <form method="post" action="/register">
+    <input type="hidden" name="_csrf" value="{{ csrfToken }}">
+    <div class="grid-2">
+      <div class="field">
+        <label for="username">Username</label>
+        <input id="username" name="username" value="{{ old.username|default('') }}" class="{{ errors.username ? 'is-invalid' : '' }}" autofocus>
+        {% if errors.username %}<small class="err">{{ errors.username }}</small>{% else %}<small class="hint">3–20 chars, letters/numbers/underscore</small>{% endif %}
+      </div>
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" type="email" name="email" value="{{ old.email|default('') }}" class="{{ errors.email ? 'is-invalid' : '' }}">
+        {% if errors.email %}<small class="err">{{ errors.email }}</small>{% endif %}
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" type="password" name="password" class="{{ errors.password ? 'is-invalid' : '' }}">
+        {% if errors.password %}<small class="err">{{ errors.password }}</small>{% else %}<small class="hint">At least 8 characters</small>{% endif %}
+      </div>
+      <div class="field">
+        <label for="confirmPassword">Confirm password</label>
+        <input id="confirmPassword" type="password" name="confirmPassword" class="{{ errors.confirmPassword ? 'is-invalid' : '' }}">
+        {% if errors.confirmPassword %}<small class="err">{{ errors.confirmPassword }}</small>{% endif %}
+      </div>
+    </div>
+    <button class="btn primary btn-block" type="submit">Create account</button>
+  </form>
+  <p class="alt">Already have an account? <a href="/login">Log in</a></p>
 </section>
 {% endblock %}

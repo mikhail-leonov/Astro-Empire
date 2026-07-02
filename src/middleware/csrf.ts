@@ -13,6 +13,12 @@ function safeEqual(a: string, b: string): boolean {
 /**
  * Issues a per-session CSRF token (exposed as res.locals.csrfToken) and
  * verifies it on every state-changing request.
+ *
+ * FIX: on failure this used to always `res.render('error', ...)`, returning
+ * an HTML page even for /api/galaxy/* routes. Every API client call does
+ * `fetch(...).then(r => r.json())`, so a bad/missing CSRF token surfaced as
+ * an opaque "Unexpected token '<'" JSON-parse crash instead of the real
+ * "invalid CSRF token" reason. API routes now get a JSON 403 instead.
  */
 export function csrfMiddleware(req: Request, res: Response, next: NextFunction): void {
   if (!req.session.csrfToken) {
@@ -26,6 +32,10 @@ export function csrfMiddleware(req: Request, res: Response, next: NextFunction):
       (typeof req.headers['x-csrf-token'] === 'string' ? (req.headers['x-csrf-token'] as string) : '');
 
     if (!sent || !safeEqual(sent, req.session.csrfToken)) {
+      if (req.path.startsWith('/api/')) {
+        res.status(403).json({ ok: false, error: 'Invalid or missing security token. Please reload and try again.' });
+        return;
+      }
       res.status(403).render('error', {
         title: 'Forbidden',
         code: 403,

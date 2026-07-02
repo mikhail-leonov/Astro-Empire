@@ -1,32 +1,28 @@
-{% extends "layout.twig" %}
+{% extends 'layout.twig' %}
 {% block content %}
-<section class="card account-card">
-    <h2>Your account</h2>
+<section class="card">
+  <h2>Account</h2>
+  <p class="muted">Commander profile &amp; subscription tier.</p>
+  <dl class="profile">
+    <div><dt>Username</dt><dd>{{ account.username }}</dd></div>
+    <div><dt>Email</dt><dd>{{ account.email }}</dd></div>
+    <div><dt>Role</dt><dd>{{ account.role }}</dd></div>
+    <div><dt>Tier</dt><dd>{{ account.tierName }}</dd></div>
+    <div><dt>Joined</dt><dd>{{ account.createdAt|date('Y-m-d') }}</dd></div>
+    <div><dt>Last seen</dt><dd>{{ account.lastSeen|date('Y-m-d H:i') }}</dd></div>
+  </dl>
+  <div class="account-actions">
+    <a class="btn primary" href="/play">▶ Play</a>
+    {% if account.role == 'admin' %}<a class="btn ghost" href="/admin">Admin panel</a>{% endif %}
+  </div>
 
-    <dl class="profile">
-        <div><dt>Username</dt><dd>{{ account.username }}</dd></div>
-        <div><dt>Email</dt><dd>{{ account.email }}</dd></div>
-        <div><dt>Role</dt><dd>{{ account.role }}</dd></div>
-        <div><dt>Account tier</dt><dd>{{ account.tierName }}</dd></div>
-        <div><dt>Member since</dt><dd>{{ account.created_at | date('M j, Y') }}</dd></div>
-        <div><dt>Last login</dt><dd>{{ account.last_seen | date('M j, Y · H:i') }}</dd></div>
-    </dl>
-
-    <div class="account-actions">
-        <a class="btn btn-primary" href="/play">▸ Enter the Galaxy</a>
-        <form method="POST" action="/logout" class="inline">
-            <input type="hidden" name="_csrf" value="{{ csrfToken }}">
-            <button type="submit" class="btn btn-ghost">Log out</button>
-        </form>
-    </div>
-</section>
-
-<section class="card danger-card">
-    <h3>Danger zone</h3>
-    <p class="muted">Deleting your account is permanent and cannot be undone.</p>
-    <form method="POST" action="/account/delete" data-confirm="Delete your account permanently? This cannot be undone.">
-        <input type="hidden" name="_csrf" value="{{ csrfToken }}">
-        <button type="submit" class="btn btn-danger">Delete my account</button>
+  <h3>Danger zone</h3>
+  <div class="card danger-card">
+    <p class="muted">Deleting your account permanently removes your empire, bases, fleets and login. This cannot be undone.</p>
+    <form method="post" action="/account/delete" data-confirm="Permanently delete your account and empire? This cannot be undone.">
+      <input type="hidden" name="_csrf" value="{{ csrfToken }}">
+      <button class="btn danger" type="submit">Delete account</button>
     </form>
+  </div>
 </section>
 {% endblock %}

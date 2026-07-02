@@ -11,6 +11,21 @@ function requireAuthJson(req: Request, res: Response, next: NextFunction): void 
   res.status(401).json({ ok: false, error: 'Not logged in' });
 }
 
+/**
+ * FIX: /generate used to be reachable by any authenticated user via
+ * requireAuthJson, yet it truncates gx_systems/gx_astros and deletes every
+ * player's remote bases + gx_claims rows, and grants the caller
+ * 100,000,000 credits. Any logged-in commander could wipe the whole galaxy
+ * and every other player's colonies, and self-enrich, in a single request.
+ * It is now admin-only, same as the JSON-401 pattern used elsewhere in this
+ * file (401 for "not logged in", 403 for "logged in but not admin").
+ */
+function requireAdminJson(req: Request, res: Response, next: NextFunction): void {
+  if (!req.session.userId) { res.status(401).json({ ok: false, error: 'Not logged in' }); return; }
+  if (req.session.role !== 'admin') { res.status(403).json({ ok: false, error: 'Admin access required' }); return; }
+  next();
+}
+
 /** Ensure the logged-in user has a `players` row, return its id. */
 async function playerIdFor(req: any): Promise<number> {
   const userId = req.session.userId as number;
@@ -77,16 +92,22 @@ router.post('/fleet/recall', requireAuthJson, asyncHandler(async (req, res) => {
 }));
 
 // Colonize a procedurally generated Galaxy-Gen astro (Outpost Ship, remote).
+// FIX: `size` used to be taken directly from the client and trusted as the
+// new base's building-slot capacity. galaxyService.sendColonize() now looks
+// the address up in gx_astros itself and uses the DB's real `area` value,
+// ignoring whatever the client sends, so a modified client can no longer
+// grant itself an oversized base by lying about `size`.
 router.post('/colonize', requireAuthJson, asyncHandler(async (req, res) => {
   const playerId = await playerIdFor(req);
-  const result = await galaxy.sendColonize(playerId, String(req.body?.address), Number(req.body?.size) || 12);
+  const result = await galaxy.sendColonize(playerId, String(req.body?.address));
   res.json(result);
 }));
 
 // ---------------------------------------------------------------- galaxy gen
 // Generate: clear the galaxy tables and repopulate from the config. Grants
 // the requesting commander 100,000,000 credits once the galaxy is ready.
-router.post('/generate', requireAuthJson, asyncHandler(async (req, res) => {
+// FIX: admin-only now — see requireAdminJson above.
+router.post('/generate', requireAdminJson, asyncHandler(async (req, res) => {
   const playerId = await playerIdFor(req);
   const out = await galaxy.clearAndGenerate(req.body || {}, playerId);
   res.json({ ok: true, ...out });

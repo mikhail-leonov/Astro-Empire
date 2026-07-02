@@ -1,69 +1,48 @@
-import session, { type SessionData, type Store } from 'express-session';
+import session from 'express-session';
 import type { DbConfig } from '../db';
 
-// express-mysql-session has no bundled types.
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const MySQLStore = require('express-mysql-session')(session);
-
 /**
- * A session store that delegates to an underlying store which can be swapped
- * at runtime. Before the database is configured it uses an in-memory store
- * (so the setup wizard's session/CSRF works); afterwards it is swapped for the
- * MySQL-backed store — no restart required.
+ * A session.Store that does nothing until a real MySQL-backed store is
+ * attached (via attachMySQLStore, called right after /setup succeeds).
+ * Before that point sessions are simply not persisted across restarts —
+ * acceptable during first-run setup, since there's no DB to store them in
+ * yet anyway.
  */
 class LazyStore extends session.Store {
-  private current: Store = new session.MemoryStore();
+  private real: session.Store | null = null;
+  private memoryFallback = new session.MemoryStore();
 
-  setStore(store: Store): void {
-    this.current = store;
+  attach(store: session.Store): void {
+    this.real = store;
   }
 
-  get(sid: string, callback: (err: unknown, session?: SessionData | null) => void): void {
-    this.current.get(sid, callback);
+  private target(): session.Store {
+    return this.real || this.memoryFallback;
   }
 
-  set(sid: string, sess: SessionData, callback?: (err?: unknown) => void): void {
-    this.current.set(sid, sess, callback);
+  get(sid: string, cb: (err: any, session?: session.SessionData | null) => void): void {
+    this.target().get(sid, cb);
   }
-
-  destroy(sid: string, callback?: (err?: unknown) => void): void {
-    this.current.destroy(sid, callback);
+  set(sid: string, sessionData: session.SessionData, cb?: (err?: any) => void): void {
+    this.target().set(sid, sessionData, cb);
   }
-
-  touch(sid: string, sess: SessionData, callback?: () => void): void {
-    if (typeof this.current.touch === 'function') {
-      this.current.touch(sid, sess, callback);
-    } else if (callback) {
-      callback();
-    }
+  destroy(sid: string, cb?: (err?: any) => void): void {
+    this.target().destroy(sid, cb);
   }
-
-  all(
-    callback: (
-      err: unknown,
-      obj?: SessionData[] | { [sid: string]: SessionData } | null
-    ) => void
-  ): void {
-    if (typeof this.current.all === 'function') this.current.all(callback);
-    else callback(null, []);
-  }
-
-  length(callback: (err: unknown, length?: number) => void): void {
-    if (typeof this.current.length === 'function') this.current.length(callback);
-    else callback(null, 0);
-  }
-
-  clear(callback?: (err?: unknown) => void): void {
-    if (typeof this.current.clear === 'function') this.current.clear(callback);
-    else if (callback) callback();
+  touch(sid: string, sessionData: session.SessionData, cb?: () => void): void {
+    const t = this.target() as any;
+    if (typeof t.touch === 'function') t.touch(sid, sessionData, cb);
+    else if (cb) cb();
   }
 }
 
 export const lazyStore = new LazyStore();
 
-/** Swap the active store to a MySQL-backed one using the given DB config. */
+/** Swap in a real MySQL-backed session store once DB credentials exist. */
 export function attachMySQLStore(cfg: DbConfig): void {
-  const store = new MySQLStore({
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const MySQLStoreFactory = require('express-mysql-session')(session);
+  const store = new MySQLStoreFactory({
     host: cfg.host,
     port: cfg.port,
     user: cfg.user,
@@ -72,8 +51,12 @@ export function attachMySQLStore(cfg: DbConfig): void {
     createDatabaseTable: true,
     schema: {
       tableName: 'sessions',
-      columnNames: { session_id: 'session_id', expires: 'expires', data: 'data' },
+      columnNames: {
+        session_id: 'session_id',
+        expires: 'expires',
+        data: 'data',
+      },
     },
   });
-  lazyStore.setStore(store);
+  lazyStore.attach(store);
 }

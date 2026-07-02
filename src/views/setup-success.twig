@@ -1,13 +1,9 @@
-{% extends "layout.twig" %}
+{% extends 'layout.twig' %}
 {% block content %}
-<section class="card auth-card">
-    <h2>✓ Database connected</h2>
-    <p class="muted">
-        Your connection details were verified and saved to <code>.env</code>.
-        The database and required tables are ready.
-    </p>
-    {% if warn %}<div class="flash flash-info">{{ warn }}</div>{% endif %}
-    <a class="btn btn-primary btn-block" href="/register">Create your account</a>
-    <p class="alt"><a href="/">Go to home</a></p>
+<section class="card">
+  <h2>✅ Setup complete</h2>
+  <p class="muted">Your database is connected and initialized.</p>
+  {% if warn %}<div class="flash flash-error">{{ warn }}</div>{% endif %}
+  <a class="btn primary btn-block" href="/register">Create your commander account →</a>
 </section>
 {% endblock %}

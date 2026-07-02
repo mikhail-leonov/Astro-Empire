@@ -1,0 +1,13 @@
+{% extends 'layout.twig' %}
+{% block content %}
+<section class="card">
+  <h2>✅ Database reset</h2>
+  <p class="muted">The database was dropped and rebuilt from the latest <code>src/sql/schema.sql</code>{{ seeded ? ', then seeded from src/sql/seed.sql.' : '.' }}</p>
+  {% if seeded %}
+    <p class="muted">Sample data from <code>seed.sql</code> is now in place, including its seed commander account.</p>
+  {% else %}
+    <p class="muted">No <code>src/sql/seed.sql</code> was found, so the database is empty aside from the default account tiers — register a new account to get started.</p>
+  {% endif %}
+  <a class="btn primary btn-block" href="/register">Create your commander account →</a>
+</section>
+{% endblock %}

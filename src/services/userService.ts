@@ -1,146 +1,100 @@
 import bcrypt from 'bcryptjs';
-import * as users from '../models/userModel';
-import type { UserRow, UserWithTierRow } from '../models/userModel';
+import * as userModel from '../models/userModel';
 import { query, execute, insert, affected } from '../db';
-import type { PublicUser, AccountTier } from '../types/types';
 
 const SALT_ROUNDS = 12;
 
-export interface RegisterInput {
-  username: string;
-  email: string;
-  password: string;
+export interface PublicProfile {
+  id: number; username: string; email: string; role: string;
+  tierName: string; createdAt: Date; lastSeen: Date;
 }
 
-export type RegisterResult =
+type RegisterResult =
   | { ok: true; userId: number; role: string }
   | { ok: false; field: 'username' | 'email'; error: string };
 
-export type AuthResult =
-  | { ok: true; user: PublicUser }
-  | { ok: false };
-
-function toPublic(row: UserWithTierRow): PublicUser {
-  return {
-    id: row.id,
-    username: row.username,
-    email: row.email,
-    role: row.role,
-    tierId: row.tier_id,
-    tierName: row.tier_name,
-    created_at: row.created_at,
-    last_seen: row.last_seen,
-  };
-}
-
-/** Create a new account (default role 'user', default tier 'Free'). */
-export async function register(input: RegisterInput): Promise<RegisterResult> {
-  if (await users.findByUsername(input.username)) {
-    return { ok: false, field: 'username', error: 'That username is already taken.' };
-  }
-  if (await users.findByEmail(input.email)) {
-    return { ok: false, field: 'email', error: 'An account with that email already exists.' };
-  }
+export async function register(input: { username: string; email: string; password: string }): Promise<RegisterResult> {
+  const existingName = await userModel.findByUsername(input.username);
+  if (existingName) return { ok: false, field: 'username', error: 'That username is already taken.' };
+  const existingEmail = await userModel.findByEmail(input.email);
+  if (existingEmail) return { ok: false, field: 'email', error: 'An account already uses that email.' };
 
   const hash = await bcrypt.hash(input.password, SALT_ROUNDS);
-
   try {
-    const userId = await users.createUser(input.username, input.email, hash);
+    const userId = await userModel.createUser(input.username, input.email, hash);
     return { ok: true, userId, role: 'user' };
-  } catch (err: unknown) {
-    if (err && typeof err === 'object' && (err as { code?: string }).code === users.ER_DUP_ENTRY) {
-      const message = String((err as { message?: string }).message ?? '');
-      const field: 'username' | 'email' = message.includes('email') ? 'email' : 'username';
-      return {
-        ok: false,
-        field,
-        error: field === 'email'
-          ? 'An account with that email already exists.'
-          : 'That username is already taken.',
-      };
+  } catch (e: any) {
+    if (e && e.code === userModel.ER_DUP_ENTRY) {
+      return { ok: false, field: 'username', error: 'That username or email is already registered.' };
     }
-    throw err;
+    throw e;
   }
 }
 
-/** Verify credentials. `identifier` may be a username or an email. */
+type AuthResult =
+  | { ok: true; user: { id: number; username: string; role: string } }
+  | { ok: false };
+
 export async function authenticate(identifier: string, password: string): Promise<AuthResult> {
-  const row = await users.findByIdentifier(identifier);
-  if (!row) {
-    await bcrypt.compare(password, '$2a$12$0000000000000000000000000000000000000000000000000000');
-    return { ok: false };
-  }
-
-  const match = await bcrypt.compare(password, row.password_hash);
-  if (!match) return { ok: false };
-
-  await users.touchLastSeen(row.id);
-  const withTier = await users.findByIdWithTier(row.id);
-  if (!withTier) return { ok: false };
-  return { ok: true, user: toPublic(withTier) };
+  const user = await userModel.findByIdentifier(identifier);
+  if (!user) return { ok: false };
+  const good = await bcrypt.compare(password, user.password_hash);
+  if (!good) return { ok: false };
+  await userModel.touchLastSeen(user.id);
+  return { ok: true, user: { id: user.id, username: user.username, role: user.role } };
 }
 
-export async function getProfile(id: number): Promise<PublicUser | null> {
-  const row = await users.findByIdWithTier(id);
-  return row ? toPublic(row) : null;
-}
-
-export async function deleteAccount(id: number): Promise<boolean> {
-  return users.deleteById(id);
-}
-
-/* ---------------------------------------------------------- admin: user CRUD */
-export async function adminListUsers(): Promise<PublicUser[]> {
-  const rows = await users.listAllWithTier();
-  return rows.map(toPublic);
-}
-
-export async function adminUpdateUser(id: number, fields: { username?: string; email?: string; tierId?: number; role?: 'user' | 'admin' }): Promise<void> {
-  const current = await users.findById(id);
-  if (!current) throw new Error('User not found');
-  if (fields.username !== undefined || fields.email !== undefined) {
-    await users.updateProfile(id, fields.username ?? current.username, fields.email ?? current.email);
-  }
-  if (fields.tierId !== undefined) await users.updateTier(id, fields.tierId);
-  if (fields.role !== undefined) await users.updateRole(id, fields.role);
-}
-
-export async function adminDeleteUser(id: number): Promise<boolean> {
-  return users.deleteById(id);
-}
-
-/* ---------------------------------------------------------- admin: tier CRUD */
-function toTier(row: any): AccountTier {
+export async function getProfile(userId: number): Promise<PublicProfile | null> {
+  const row = await userModel.findByIdWithTier(userId);
+  if (!row) return null;
   return {
-    id: row.id, code: row.code, name: row.name,
-    maxBases: row.max_bases, maxQueue: row.max_queue,
-    description: row.description, sortOrder: row.sort_order,
+    id: row.id, username: row.username, email: row.email, role: row.role,
+    tierName: row.tier_name, createdAt: row.created_at, lastSeen: row.last_seen,
   };
 }
 
-export async function listTiers(): Promise<AccountTier[]> {
-  const rows = await query<any>('SELECT * FROM account_tiers ORDER BY sort_order, id');
-  return rows.map(toTier);
+export async function deleteAccount(userId: number): Promise<void> {
+  await userModel.deleteById(userId);
 }
 
-export async function createTier(input: { code: string; name: string; maxBases: number; maxQueue: number; description: string; sortOrder: number }): Promise<number> {
+/* ---------------------------------------------------------- admin */
+export async function adminListUsers() {
+  return userModel.listAllWithTier();
+}
+
+export async function adminUpdateUser(id: number, fields: { username: string; email: string; tierId: number; role: 'user' | 'admin' }): Promise<void> {
+  await userModel.updateProfile(id, fields.username, fields.email);
+  await userModel.updateTier(id, fields.tierId);
+  await userModel.updateRole(id, fields.role);
+}
+
+export async function adminDeleteUser(id: number): Promise<void> {
+  await userModel.deleteById(id);
+}
+
+/* ---------------------------------------------------------- account tiers */
+export interface TierRow {
+  id: number; code: string; name: string; description: string;
+  max_bases: number; max_queue: number; sort_order: number;
+}
+export async function listTiers(): Promise<TierRow[]> {
+  return query<TierRow>('SELECT * FROM account_tiers ORDER BY sort_order, id');
+}
+export async function createTier(fields: { code: string; name: string; maxBases: number; maxQueue: number; description: string; sortOrder: number }): Promise<number> {
   return insert(
-    'INSERT INTO account_tiers (code, name, max_bases, max_queue, description, sort_order) VALUES (?,?,?,?,?,?)',
-    [input.code, input.name, input.maxBases, input.maxQueue, input.description, input.sortOrder],
+    'INSERT INTO account_tiers (code, name, description, max_bases, max_queue, sort_order) VALUES (?,?,?,?,?,?)',
+    [fields.code, fields.name, fields.description, fields.maxBases, fields.maxQueue, fields.sortOrder],
   );
 }
-
-export async function updateTierRow(id: number, input: { code: string; name: string; maxBases: number; maxQueue: number; description: string; sortOrder: number }): Promise<void> {
+export async function updateTierRow(id: number, fields: { code: string; name: string; maxBases: number; maxQueue: number; description: string; sortOrder: number }): Promise<void> {
   await execute(
-    'UPDATE account_tiers SET code=?, name=?, max_bases=?, max_queue=?, description=?, sort_order=? WHERE id=?',
-    [input.code, input.name, input.maxBases, input.maxQueue, input.description, input.sortOrder, id],
+    'UPDATE account_tiers SET code=?, name=?, description=?, max_bases=?, max_queue=?, sort_order=? WHERE id=?',
+    [fields.code, fields.name, fields.description, fields.maxBases, fields.maxQueue, fields.sortOrder, id],
   );
 }
-
 export async function deleteTier(id: number): Promise<{ ok: true } | { ok: false; error: string }> {
-  if (id === 1) return { ok: false, error: 'The default Free tier cannot be deleted.' };
   const inUse = await query<{ n: number }>('SELECT COUNT(*) AS n FROM users WHERE tier_id = ?', [id]);
-  if ((inUse[0]?.n ?? 0) > 0) return { ok: false, error: 'Reassign the accounts on this tier before deleting it.' };
+  if ((inUse[0]?.n ?? 0) > 0) return { ok: false, error: 'Cannot delete a tier that accounts are currently using.' };
   const removed = await affected('DELETE FROM account_tiers WHERE id = ?', [id]);
-  return removed > 0 ? { ok: true } : { ok: false, error: 'Tier not found' };
+  return removed > 0 ? { ok: true } : { ok: false, error: 'Tier not found.' };
 }

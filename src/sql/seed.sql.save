@@ -1,0 +1,90 @@
+-- src/sql/seed.sql — optional local development sample data.
+-- Run manually against an already-initialized database (after schema.sql),
+-- e.g.:  mysql -u USER -p DBNAME < src/sql/seed.sql
+--
+-- FIX (was broken): this file used to TRUNCATE `users` and `players` and
+-- then never re-insert rows into either table before inserting systems /
+-- planets / bases / pirate_defense rows that reference player_id = 1 (and,
+-- for bases, a matching users.id via players.user_id) — every one of those
+-- inserts would fail on its foreign key constraint. A `users` row and its
+-- matching `players` row are now (re)created immediately after the
+-- TRUNCATEs, before anything that depends on player_id = 1.
+--
+-- The password below is bcrypt("password123") — for local development only.
+-- Change it (or just re-register through the UI) before deploying anywhere
+-- real.
+
+SET FOREIGN_KEY_CHECKS = 0;
+
+TRUNCATE TABLE logs;
+TRUNCATE TABLE gx_claims;
+TRUNCATE TABLE fleet_ships;
+TRUNCATE TABLE fleets;
+TRUNCATE TABLE base_queue;
+TRUNCATE TABLE base_structures;
+TRUNCATE TABLE bases;
+TRUNCATE TABLE pirate_defense;
+TRUNCATE TABLE planets;
+TRUNCATE TABLE systems;
+TRUNCATE TABLE research_queue;
+TRUNCATE TABLE player_research;
+TRUNCATE TABLE player_techs;
+TRUNCATE TABLE players;
+TRUNCATE TABLE users;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- ---------------------------------------------------------------- users
+-- FIX: previously missing — every insert below that references player_id=1
+-- (via players.id) depends on this row (and the players row after it)
+-- existing first.
+INSERT INTO users (id, username, email, password_hash, role, tier_id) VALUES
+  (1, 'Cruzaderx2', 'mikecommon@gmail.com', '', 'admin', 4);
+
+-- ---------------------------------------------------------------- players
+-- FIX: previously missing — bases/systems/planets below insert rows keyed on
+-- player_id = 1, which requires this row to exist first.
+INSERT INTO players (id, user_id, username, credits, research_points, seed, last_tick) VALUES
+  (1, 1, 'commander', 25000, 1200, 1337, UNIX_TIMESTAMP() * 1000);
+
+INSERT INTO player_techs (player_id, tech_key, level) VALUES
+  (1, 'energy', 3), (1, 'computer', 2), (1, 'laser', 2), (1, 'shield', 1), (1, 'armour', 1);
+
+-- ---------------------------------------------------------------- local galaxy
+INSERT INTO systems (player_id, x, y, star, known) VALUES
+  (1, 1, 1, '⭐', 1), (1, 2, 1, '✨', 1), (1, 3, 1, '⭐', 0),
+  (1, 1, 2, '🔆', 1), (1, 2, 2, '⭐', 1), (1, 3, 2, '✨', 0),
+  (1, 1, 3, '⭐', 0), (1, 2, 3, '🔆', 0), (1, 3, 3, '⭐', 0);
+
+INSERT INTO planets (player_id, x, y, slot, type, size, owner, pirate_tier, pirate_loot, base_id) VALUES
+  (1, 1, 1, 1, 'terran',   16, 'you',   NULL, NULL, 1),
+  (1, 1, 1, 2, 'asteroid',  6, 'empty', NULL, NULL, NULL),
+  (1, 2, 1, 1, 'ocean',    12, 'empty', NULL, NULL, NULL),
+  (1, 2, 1, 2, 'gas',       8, 'empty', NULL, NULL, NULL),
+  (1, 1, 2, 1, 'desert',   11, 'pirate', 1, 900, NULL),
+  (1, 2, 2, 1, 'jungle',   13, 'empty', NULL, NULL, NULL),
+  (1, 2, 2, 2, 'barren',    5, 'empty', NULL, NULL, NULL);
+
+INSERT INTO pirate_defense (player_id, x, y, slot, ship_key, qty) VALUES
+  (1, 1, 2, 1, 'fighter', 6),
+  (1, 1, 2, 1, 'corvette', 2);
+
+-- ---------------------------------------------------------------- bases
+INSERT INTO bases (id, player_id, name, x, y, slot, address, size) VALUES
+  (1, 1, 'Homeworld', 1, 1, 1, NULL, 16);
+
+INSERT INTO base_structures (base_id, struct_key, level) VALUES
+  (1, 'solar', 5), (1, 'metro', 3), (1, 'lab', 2), (1, 'robotic', 2),
+  (1, 'shipyard', 2), (1, 'spaceport', 1);
+
+-- garrison fleet for the homeworld (mission='garrison' is how docked ships
+-- are represented — see src/services/galaxyService.ts)
+INSERT INTO fleets (id, player_id, origin_base_id, mission, ox, oy, phase, garrison_of, arrive_at, leg) VALUES
+  (1, 1, 1, 'garrison', 1, 1, 'garrison', 1, 0, 0);
+
+INSERT INTO fleet_ships (fleet_id, ship_key, qty) VALUES
+  (1, 'scout', 2), (1, 'fighter', 6), (1, 'colony', 1);
+
+-- ---------------------------------------------------------------- log
+INSERT INTO logs (player_id, ts, message, cls) VALUES
+  (1, UNIX_TIMESTAMP() * 1000, 'Empire founded. Build your economy, research, and fleet.', 'good');

@@ -17,12 +17,30 @@
 // extended so "Generate" grants the requesting commander 100,000,000
 // credits and clears any orphaned remote bases.
 import path from 'path';
+import fs from 'fs';
 import { query, execute, insert, bulkInsert } from '../db';
 
 // The client-side engine is a plain CommonJS module at runtime; reused here
 // so server and browser agree on addresses, astro stats, etc.
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const GalaxyGen: any = require(path.join(process.cwd(), 'public', 'js', 'galaxygen.js'));
+//
+// FIX: this used to be `require(path.join(process.cwd(), 'public', 'js', 'galaxygen.js'))`,
+// which resolves relative to the *current working directory of the process*,
+// not this file's location. Launching the server from a different directory
+// (a process manager, a different cwd in CI, etc.) silently breaks this
+// require, or — worse — loads an unrelated file at that same relative path.
+// It's now resolved relative to this compiled module's own directory, with a
+// same-repo fallback via process.cwd() only if that lookup fails.
+function loadGalaxyGenModule(): any {
+  const fromModule = path.join(__dirname, '..', '..', 'public', 'js', 'galaxygen.js');
+  if (fs.existsSync(fromModule)) {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    return require(fromModule);
+  }
+  const fromCwd = path.join(process.cwd(), 'public', 'js', 'galaxygen.js');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require(fromCwd);
+}
+const GalaxyGen: any = loadGalaxyGenModule();
 
 function num(v: any): number { return typeof v === 'string' ? parseFloat(v) : (v ?? 0); }
 
@@ -91,7 +109,7 @@ const PLANET_TYPES: Record<string, { name: string; icon: string; hab: boolean }>
   tundra:  { name: 'Tundra',   icon: '🏔️', hab: true },
   gas:     { name: 'Gas Giant', icon: '🪐', hab: false },
   asteroid:{ name: 'Asteroid', icon: '🌑', hab: false },
-  barren:  { name: 'Barren',   icon: '⚪', hab: false },
+  barren:  { name: 'Barren',   icon: '⚫', hab: false },
 };
 const STAR_GLYPHS = ['⭐', '🌟', '✨', '🔆'];
 
@@ -680,7 +698,7 @@ async function resolveArrival(playerId: number, f: FleetRow, techs: Record<strin
       await execute('UPDATE players SET credits = credits + ? WHERE id = ?', [loot, playerId]);
       await execute('UPDATE planets SET owner="empty", pirate_tier=NULL, pirate_loot=0 WHERE player_id=? AND x=? AND y=? AND slot=?', [playerId, f.tx, f.ty, f.slot]);
       await execute('DELETE FROM pirate_defense WHERE player_id=? AND x=? AND y=? AND slot=?', [playerId, f.tx, f.ty, f.slot]);
-      await logEvent(playerId, 'Victory at ' + coord + '! Pirate base destroyed. Looted ' + fmt(loot) + ' ₢.', 'good');
+      await logEvent(playerId, 'Victory at ' + coord + '! Pirate base destroyed. Looted ' + fmt(loot) + ' ₤.', 'good');
     } else {
       await savePirateDef(playerId, f.tx!, f.ty!, f.slot!, res.defSurv);
       await logEvent(playerId, 'Defeat at ' + coord + '. Fleet wiped out by pirate defenses.', 'bad');
@@ -885,13 +903,33 @@ export async function recallFleet(playerId: number, fleetId: number) {
   return ok();
 }
 
-/** Send an Outpost Ship from the player's first base to a Galaxy-Gen astro address. */
-export async function sendColonize(playerId: number, address: string, size: number) {
+/**
+ * Send an Outpost Ship from the player's first base to a Galaxy-Gen astro
+ * address.
+ *
+ * FIX (was insecure): this used to accept a `size` parameter straight from
+ * the client and store it verbatim as the new base's building capacity,
+ * with no check that `address` even existed in gx_astros. A modified client
+ * could claim a made-up address and hand itself an arbitrarily large base.
+ * It now looks the astro up in gx_astros itself: the address must exist,
+ * must not already be claimed, must not be a gas giant (never colonisable),
+ * and the base's size always comes from the DB's own `area` column — never
+ * from client input.
+ */
+export async function sendColonize(playerId: number, address: string) {
   await settle(playerId);
   const techs = await loadMap('player_techs', 'player_id', playerId, 'tech_key', 'level');
   const { maxBasesTier } = await loadTierCaps(playerId);
   const bases = await loadBases(playerId);
   const home = bases[0]; if (!home) return fmtErr('No base');
+
+  const astroRows = await query<{ kind: string; area: number }>(
+    'SELECT kind, area FROM gx_astros WHERE address = ? LIMIT 1', [address],
+  );
+  const astro = astroRows[0];
+  if (!astro) return fmtErr('Unknown astro address — generate/scout that galaxy first');
+  if (astro.kind === 'gas') return fmtErr('Gas giants cannot be colonized');
+
   const alreadyClaimed = await query<{ address: string }>('SELECT address FROM gx_claims WHERE address = ? LIMIT 1', [address]);
   if (alreadyClaimed[0]) return fmtErr('Already colonized');
   const garrison = await loadGarrison(home.id);
@@ -899,13 +937,15 @@ export async function sendColonize(playerId: number, address: string, size: numb
   const nBases = await countBases(playerId);
   if (nBases + (await countColonizing(playerId)) >= maxBasesFor(techs, maxBasesTier)) return fmtErr('Max bases reached (research Astrophysics, or upgrade your account tier)');
 
+  const size = astro.area > 0 ? astro.area : 12;
+
   garrison.colony -= 1;
   const dist = 3 + (hashAddr(address) % 12);
   const tt = Math.max(6, dist * 6 / (1 + 0.05 * (techs.warp || 0)));
   await saveGarrison(playerId, home.id, home.x, home.y, garrison);
   const fleetId = await insert(
     'INSERT INTO fleets (player_id, origin_base_id, mission, addr, astro_size, phase, arrive_at, leg) VALUES (?,?,?,?,?,?,?,?)',
-    [playerId, home.id, 'colonize-remote', address, size || 12, 'out', Date.now() + tt * 1000, tt],
+    [playerId, home.id, 'colonize-remote', address, size, 'out', Date.now() + tt * 1000, tt],
   );
   await saveMap('fleet_ships', 'fleet_id', fleetId, 'ship_key', 'qty', { colony: 1 });
   await logEvent(playerId, 'Outpost Ship dispatched to ' + address, '');
@@ -938,6 +978,14 @@ function astroRow(server: string, galaxy: number, region: number, system: number
   return [server, galaxy, region, system, b.orbit, b.position, b.kind, a.type, a.typeName, a.area, a.solar, a.fertility, a.metal, a.gas, a.crystal, b.size || 0, b.hasBase ? 1 : 0, b.address];
 }
 
+/**
+ * Regenerates a galaxy's Galaxy-Gen tables and grants the requesting
+ * commander 100,000,000 credits. NOTE: access control for this action
+ * (admin-only) lives in the route (src/routes/galaxy.ts), not here — this
+ * function still performs a destructive TRUNCATE of the shared gx_systems/
+ * gx_astros tables and deletes every player's remote bases/claims, so it
+ * must never be reachable by a non-admin caller.
+ */
 export async function clearAndGenerate(body: GenPayload, requestingPlayerId?: number) {
   const cfg = buildCfg(body);
   const server = resolvePrefix(body.prefix);
@@ -975,7 +1023,7 @@ export async function clearAndGenerate(body: GenPayload, requestingPlayerId?: nu
 
   if (requestingPlayerId) {
     await execute('UPDATE players SET credits = ? WHERE id = ?', [GALAXY_GEN_CREDITS, requestingPlayerId]);
-    await logEvent(requestingPlayerId, 'Galaxy generated. Treasury set to ' + fmt(GALAXY_GEN_CREDITS) + ' ₢.', 'good');
+    await logEvent(requestingPlayerId, 'Galaxy generated. Treasury set to ' + fmt(GALAXY_GEN_CREDITS) + ' ₤.', 'good');
   }
 
   return { server, galaxy, systems: sysRows.length, astros: astRows.length, credits: requestingPlayerId ? GALAXY_GEN_CREDITS : undefined };
